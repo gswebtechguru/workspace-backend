@@ -22,6 +22,7 @@ interface DataContextType {
   checkOut: (employeeId: string) => void;
   // Messages
   addMessage: (msg: ProjectMessage) => void;
+  deleteMessage: (id: string) => void;
   // Notifications
   markNotificationRead: (id: string) => void;
   addNotification: (n: Notification) => void;
@@ -162,6 +163,10 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setProjectMessages(prev => [...prev, msg]);
   }, []);
 
+  const deleteMessage = useCallback((id: string) => {
+    setProjectMessages(prev => prev.map(m => m.id === id ? { ...m, isDeleted: true } : m));
+  }, []);
+
   const markNotificationRead = useCallback((id: string) => {
     setNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   }, []);
@@ -243,7 +248,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     <DataContext.Provider value={{
       tasks, attendanceRecords, projectMessages, notifications, leaveRequests, projects, employees, dailyReports, announcements,
       addTask, updateTask, completeTask, reopenTask, addTimeEntry,
-      checkOut, addMessage, markNotificationRead, addNotification,
+      checkOut, addMessage, deleteMessage, markNotificationRead, addNotification,
       addLeaveRequest, updateLeaveRequest, updateProject, addProject, deleteProject, addProjectMember, removeProjectMember,
       addEmployee, updateEmployee, toggleEmployeeStatus, addAnnouncement,
     }}>

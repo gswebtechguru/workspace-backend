@@ -26,7 +26,7 @@ const projectStatusColors: Record<ProjectStatus, string> = {
 export default function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { projects, tasks, updateProject, deleteProject, addProjectMember, removeProjectMember, addTask, updateTask, addMessage, projectMessages, employees: allEmployees, addNotification } = useData();
+  const { projects, tasks, updateProject, deleteProject, addProjectMember, removeProjectMember, addTask, updateTask, addMessage, deleteMessage, projectMessages, employees: allEmployees, addNotification } = useData();
   const { employee, isAdmin } = useAuth();
   
   const [activeTab, setActiveTab] = useState<'overview' | 'tasks' | 'chat' | 'team'>('overview');
@@ -50,6 +50,83 @@ export default function ProjectDetail() {
   const project = projects.find(p => p.id === id);
   const projectTasks = tasks.filter(t => t.projectId === id);
   const projectMsgs = projectMessages.filter(m => m.projectId === id && !m.isDeleted);
+
+  // Calculate project progress based on tasks
+  const calculateProgress = () => {
+    if (projectTasks.length === 0) return 0;
+    const completedTasks = projectTasks.filter(t => t.status === 'completed').length;
+    return Math.round((completedTasks / projectTasks.length) * 100);
+  };
+
+  // Update project progress when tasks change
+  useEffect(() => {
+    if (project) {
+      const newProgress = calculateProgress();
+      if (newProgress !== project.progress) {
+        updateProject(project.id, { progress: newProgress });
+      }
+    }
+  }, [projectTasks.length, projectTasks.filter(t => t.status === 'completed').length]);
+
+  // Drag and drop handlers for chat
+  const [isDragging, setIsDragging] = useState(false);
+  const chatDropRef = useRef<HTMLDivElement>(null);
+
+  const handleChatDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleChatDragLeave = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleChatDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = Array.from(e.dataTransfer.files);
+    if (files.length > 0) {
+      handleFileUpload(files);
+    }
+  };
+
+  const handleFileUpload = (files: File[]) => {
+    files.forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const base64 = e.target?.result as string;
+        const newAttachment: ProjectAttachment = {
+          id: `att_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type,
+          url: base64,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: employee?.id || '',
+        };
+        setChatAttachments(prev => [...prev, newAttachment]);
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // Delete message handler
+  const handleDeleteMessage = (messageId: string) => {
+    deleteMessage(messageId);
+  };
+
+  // Check if message can be deleted (within 10 minutes)
+  const canDeleteMessage = (message: ProjectMessage) => {
+    const messageTime = new Date(message.createdAt).getTime();
+    const currentTime = new Date().getTime();
+    const tenMinutes = 10 * 60 * 1000;
+    return (currentTime - messageTime) < tenMinutes;
+  };
 
   useEffect(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
@@ -490,9 +567,20 @@ export default function ProjectDetail() {
                           ))}
                         </div>
                       )}
-                      <button onClick={() => setReplyTo(msg.id)} className="mt-1 text-xs text-gray-400 hover:text-indigo-600 flex items-center gap-1">
-                        <Send className="w-3 h-3" /> Reply
-                      </button>
+                      <div className="flex items-center gap-2 mt-1">
+                        <button onClick={() => setReplyTo(msg.id)} className="text-xs text-gray-400 hover:text-indigo-600 flex items-center gap-1">
+                          <Send className="w-3 h-3" /> Reply
+                        </button>
+                        {isCurrentUser && canDeleteMessage(msg) && (
+                          <button 
+                            onClick={() => handleDeleteMessage(msg.id)} 
+                            className="text-xs text-gray-400 hover:text-red-600 flex items-center gap-1"
+                            title="Delete message (available for 10 minutes)"
+                          >
+                            <Trash2 className="w-3 h-3" /> Delete
+                          </button>
+                        )}
+                      </div>
                     </div>
                   </div>
                 );
@@ -512,7 +600,18 @@ export default function ProjectDetail() {
             </div>
           )}
 
-          <div className="border-t border-gray-200 p-4">
+          <div 
+            ref={chatDropRef}
+            onDragOver={handleChatDragOver}
+            onDragLeave={handleChatDragLeave}
+            onDrop={handleChatDrop}
+            className={`border-t border-gray-200 p-4 transition-colors ${isDragging ? 'bg-indigo-50 border-indigo-300' : ''}`}
+          >
+            {isDragging && (
+              <div className="mb-2 p-3 bg-indigo-100 border-2 border-dashed border-indigo-400 rounded-lg text-center text-sm text-indigo-700">
+                Drop files here to attach
+              </div>
+            )}
             {chatAttachments.length > 0 && (
               <div className="mb-2 space-y-1">
                 {chatAttachments.map(att => (
@@ -535,10 +634,10 @@ export default function ProjectDetail() {
                 value={chatMessage}
                 onChange={(e) => setChatMessage(e.target.value)}
                 onKeyDown={(e) => e.key === 'Enter' && handleSendMessage()}
-                placeholder="Type a message..."
+                placeholder="Type a message or drag & drop files..."
                 className="input-field flex-1"
               />
-              <button onClick={handleSendMessage} disabled={!chatMessage.trim()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
+              <button onClick={handleSendMessage} disabled={!chatMessage.trim() && chatAttachments.length === 0} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50">
                 <Send className="w-4 h-4" />
               </button>
             </div>

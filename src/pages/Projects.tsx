@@ -35,6 +35,13 @@ export default function Projects() {
 
   const projectTasks = (projectId: string) => tasks.filter(t => t.projectId === projectId);
 
+  const calculateProgress = (projectId: string) => {
+    const pTasks = projectTasks(projectId);
+    if (pTasks.length === 0) return 0;
+    const completedTasks = pTasks.filter(t => t.status === 'completed').length;
+    return Math.round((completedTasks / pTasks.length) * 100);
+  };
+
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -95,12 +102,12 @@ export default function Projects() {
                 <div className="mb-3">
                   <div className="flex items-center justify-between text-xs text-gray-500 mb-1">
                     <span>Progress</span>
-                    <span>{p.progress}%</span>
+                    <span>{calculateProgress(p.id)}%</span>
                   </div>
                   <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${p.progress >= 75 ? 'bg-green-500' : p.progress >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`}
-                      style={{ width: `${p.progress}%` }}
+                      className={`h-full rounded-full ${calculateProgress(p.id) >= 75 ? 'bg-green-500' : calculateProgress(p.id) >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                      style={{ width: `${calculateProgress(p.id)}%` }}
                     />
                   </div>
                 </div>

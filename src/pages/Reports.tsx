@@ -8,6 +8,13 @@ export default function Reports() {
   const [activeTab, setActiveTab] = useState<'daily' | 'project' | 'history'>('daily');
   const [selectedEmployee, setSelectedEmployee] = useState('');
 
+  const calculateProgress = (projectId: string) => {
+    const pTasks = tasks.filter(t => t.projectId === projectId);
+    if (pTasks.length === 0) return 0;
+    const completedTasks = pTasks.filter(t => t.status === 'completed').length;
+    return Math.round((completedTasks / pTasks.length) * 100);
+  };
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -128,7 +135,7 @@ export default function Reports() {
                     <p className="text-xs text-gray-500">{p.projectId} • {p.status}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-2xl font-bold text-indigo-600">{p.progress}%</p>
+                    <p className="text-2xl font-bold text-indigo-600">{calculateProgress(p.id)}%</p>
                     <p className="text-xs text-gray-500">Progress</p>
                   </div>
                 </div>

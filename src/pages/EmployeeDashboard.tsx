@@ -27,6 +27,13 @@ export default function EmployeeDashboard() {
   const userNotifs = notifications.filter(n => n.userId === employee.userId);
   const unreadNotifs = userNotifs.filter(n => !n.isRead);
 
+  const calculateProgress = (projectId: string) => {
+    const pTasks = tasks.filter(t => t.projectId === projectId);
+    if (pTasks.length === 0) return 0;
+    const completedTasks = pTasks.filter(t => t.status === 'completed').length;
+    return Math.round((completedTasks / pTasks.length) * 100);
+  };
+
   const handleCheckOut = () => {
     checkOut(employee.id);
   };
@@ -162,10 +169,10 @@ export default function EmployeeDashboard() {
                 <div key={p.id} className="p-2.5 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-gray-900 truncate">{p.title}</p>
-                    <span className="text-xs font-medium text-indigo-600">{p.progress}%</span>
+                    <span className="text-xs font-medium text-indigo-600">{calculateProgress(p.id)}%</span>
                   </div>
                   <div className="w-full h-1.5 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${p.progress}%` }} />
+                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${calculateProgress(p.id)}%` }} />
                   </div>
                 </div>
               ))}

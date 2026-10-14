@@ -47,6 +47,13 @@ export default function AdminDashboard() {
   const [dateFilter, setDateFilter] = useState<DateFilter>('today');
   
   const dateRange = useMemo(() => getDateRange(dateFilter), [dateFilter]);
+
+  const calculateProgress = (projectId: string) => {
+    const pTasks = tasks.filter(t => t.projectId === projectId);
+    if (pTasks.length === 0) return 0;
+    const completedTasks = pTasks.filter(t => t.status === 'completed').length;
+    return Math.round((completedTasks / pTasks.length) * 100);
+  };
   
   // Filter tasks by date range
   const filteredTasks = useMemo(() => {
@@ -249,9 +256,9 @@ export default function AdminDashboard() {
                 <div className="text-right">
                   <div className="flex items-center gap-2">
                     <div className="w-20 h-2 bg-gray-200 rounded-full overflow-hidden">
-                      <div className={`h-full rounded-full ${p.progress >= 75 ? 'bg-green-500' : p.progress >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${p.progress}%` }} />
+                      <div className={`h-full rounded-full ${calculateProgress(p.id) >= 75 ? 'bg-green-500' : calculateProgress(p.id) >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`} style={{ width: `${calculateProgress(p.id)}%` }} />
                     </div>
-                    <span className="text-xs font-medium text-gray-700">{p.progress}%</span>
+                    <span className="text-xs font-medium text-gray-700">{calculateProgress(p.id)}%</span>
                   </div>
                 </div>
               </Link>
