@@ -85,20 +85,39 @@ export default function Login() {
             <p className="text-xs font-medium text-gray-600 mb-3">Quick Login (Demo Accounts - use any password):</p>
             <div className="space-y-2">
               <button onClick={() => quickLogin('suresh.nair')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
-                <p className="text-xs font-medium text-gray-900">Admin/HR — Suresh Nair</p>
-                <p className="text-xs text-gray-500">Username: suresh.nair</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-900">Admin — Suresh Nair</p>
+                  <span className="badge bg-indigo-100 text-indigo-700">Admin Panel</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Username: suresh.nair</p>
+              </button>
+              <button onClick={() => quickLogin('vikram.singh')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-900">Admin — Vikram Singh</p>
+                  <span className="badge bg-indigo-100 text-indigo-700">Admin Panel</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Username: vikram.singh</p>
               </button>
               <button onClick={() => quickLogin('rajesh.kumar')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
-                <p className="text-xs font-medium text-gray-900">Project Manager — Rajesh Kumar</p>
-                <p className="text-xs text-gray-500">Username: rajesh.kumar</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-900">Admin — Rajesh Kumar</p>
+                  <span className="badge bg-indigo-100 text-indigo-700">Admin Panel</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Username: rajesh.kumar</p>
               </button>
               <button onClick={() => quickLogin('priya.sharma')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
-                <p className="text-xs font-medium text-gray-900">Employee — Priya Sharma</p>
-                <p className="text-xs text-gray-500">Username: priya.sharma</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-900">Employee — Priya Sharma</p>
+                  <span className="badge bg-emerald-100 text-emerald-700">Employee Panel</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Username: priya.sharma</p>
               </button>
               <button onClick={() => quickLogin('ananya.gupta')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
-                <p className="text-xs font-medium text-gray-900">Employee — Ananya Gupta</p>
-                <p className="text-xs text-gray-500">Username: ananya.gupta</p>
+                <div className="flex items-center justify-between">
+                  <p className="text-xs font-medium text-gray-900">Employee — Ananya Gupta</p>
+                  <span className="badge bg-emerald-100 text-emerald-700">Employee Panel</span>
+                </div>
+                <p className="text-xs text-gray-500 mt-0.5">Username: ananya.gupta</p>
               </button>
             </div>
           </div>

@@ -2,7 +2,7 @@
 // CORE TYPES - Employee & Project Management System
 // ============================================
 
-export type UserRole = 'super_admin' | 'admin_hr' | 'project_manager' | 'employee' | 'viewer';
+export type UserRole = 'admin' | 'employee';
 
 export interface Permission {
   id: string;
@@ -90,7 +90,7 @@ export interface Project {
   projectManagerId: string;
   members: ProjectMember[];
   startDate: string;
-  targetDeliveryDate: string;
+  targetDeliveryDate?: string;
   actualCompletionDate?: string;
   priority: ProjectPriority;
   status: ProjectStatus;
@@ -99,8 +99,18 @@ export interface Project {
   actualHours: number;
   budget?: number;
   progress: number;
+  attachments: ProjectAttachment[];
   createdAt: string;
   updatedAt: string;
+}
+
+export interface ProjectAttachment {
+  id: string;
+  fileName: string;
+  fileSize: number;
+  mimeType: string;
+  uploadedAt: string;
+  uploadedBy: string;
 }
 
 export interface ProjectMember {

@@ -23,7 +23,7 @@ function ProtectedRoute({ children }: { children: React.ReactNode }) {
 function SmartRedirect() {
   const { isAuthenticated, user } = useAuth();
   if (!isAuthenticated) return <Navigate to="/login" replace />;
-  const isAdminRole = user?.role === 'super_admin' || user?.role === 'admin_hr' || user?.role === 'project_manager';
+  const isAdminRole = user?.role === 'admin';
   return <Navigate to={isAdminRole ? '/dashboard' : '/my-dashboard'} replace />;
 }
 

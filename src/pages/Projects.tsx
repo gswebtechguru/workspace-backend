@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
 import { employees } from '../data/mockData';
-import { Search, Plus, Users, Calendar, X, Target } from 'lucide-react';
-import { Project, ProjectStatus } from '../types';
+import { Search, Plus, Users, Calendar, X, Target, Upload, Paperclip, FileText, Download } from 'lucide-react';
+import { Project, ProjectStatus, ProjectAttachment } from '../types';
 
 const statusColors: Record<ProjectStatus, string> = {
   planning: 'bg-gray-100 text-gray-700', active: 'bg-green-100 text-green-700',
@@ -16,7 +17,8 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function Projects() {
-  const { projects, tasks, addProject, employees } = useData();
+  const { projects, tasks, addProject, employees: allEmployees } = useData();
+  const { employee } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -24,8 +26,11 @@ export default function Projects() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
-    targetDeliveryDate: '', projectManagerId: '', technologyStack: ''
+    startDate: '', targetDeliveryDate: '', projectManagerId: '', technologyStack: '',
+    memberIds: [] as string[]
   });
+  const [attachments, setAttachments] = useState<ProjectAttachment[]>([]);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = projects.filter(p => {
     const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
@@ -35,12 +40,46 @@ export default function Projects() {
 
   const projectTasks = (projectId: string) => tasks.filter(t => t.projectId === projectId);
 
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = e.target.files;
+    if (!files) return;
+    const newAtts: ProjectAttachment[] = Array.from(files).map(f => ({
+      id: `att_${Date.now()}_${Math.random()}`,
+      fileName: f.name,
+      fileSize: f.size,
+      mimeType: f.type || 'application/octet-stream',
+      uploadedAt: new Date().toISOString(),
+      uploadedBy: employee?.id || 'e1',
+    }));
+    setAttachments(prev => [...prev, ...newAtts]);
+    if (fileInputRef.current) fileInputRef.current.value = '';
+  };
+
+  const removeAttachment = (id: string) => {
+    setAttachments(prev => prev.filter(a => a.id !== id));
+  };
+
+  const toggleMember = (empId: string) => {
+    setNewProject(prev => ({
+      ...prev,
+      memberIds: prev.memberIds.includes(empId)
+        ? prev.memberIds.filter(id => id !== empId)
+        : [...prev.memberIds, empId]
+    }));
+  };
+
   const handleCreateProject = () => {
-    if (!newProject.title || !newProject.targetDeliveryDate || !newProject.projectManagerId) {
-      alert('Please fill all required fields: Title, Target Delivery Date, and Project Manager');
+    if (!newProject.title || !newProject.startDate || !newProject.projectManagerId) {
+      alert('Please fill all required fields: Title, Start Date, and Project Manager');
       return;
     }
     const today = new Date().toISOString().split('T')[0];
+    const allMembers = [
+      { id: `pm_${Date.now()}_mgr`, employeeId: newProject.projectManagerId, role: 'manager' as const, joinedAt: today },
+      ...newProject.memberIds.map((id, i) => ({
+        id: `pm_${Date.now()}_${i}`, employeeId: id, role: 'developer' as const, joinedAt: today
+      }))
+    ];
     const project: Project = {
       id: `p_${Date.now()}`,
       projectId: `PRJ${String(projects.length + 1).padStart(3, '0')}`,
@@ -48,21 +87,29 @@ export default function Projects() {
       description: newProject.description,
       technologyStack: newProject.technologyStack ? newProject.technologyStack.split(',').map(t => t.trim()) : [],
       projectManagerId: newProject.projectManagerId,
-      members: [{ id: `pm_${Date.now()}`, employeeId: newProject.projectManagerId, role: 'manager', joinedAt: today }],
-      startDate: today,
-      targetDeliveryDate: newProject.targetDeliveryDate,
+      members: allMembers,
+      startDate: newProject.startDate,
+      targetDeliveryDate: newProject.targetDeliveryDate || undefined,
       priority: newProject.priority,
       status: 'planning',
       milestones: [],
       estimatedHours: 0,
       actualHours: 0,
       progress: 0,
+      attachments: attachments,
       createdAt: today,
       updatedAt: today,
     };
     addProject(project);
     setShowCreateModal(false);
-    setNewProject({ title: '', description: '', priority: 'medium', targetDeliveryDate: '', projectManagerId: '', technologyStack: '' });
+    setNewProject({ title: '', description: '', priority: 'medium', startDate: '', targetDeliveryDate: '', projectManagerId: '', technologyStack: '', memberIds: [] });
+    setAttachments([]);
+  };
+
+  const formatFileSize = (bytes: number) => {
+    if (bytes < 1024) return `${bytes} B`;
+    if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   };
 
   return (
@@ -99,7 +146,7 @@ export default function Projects() {
             const pTasks = projectTasks(p.id);
             const completedTasks = pTasks.filter(t => t.status === 'completed').length;
             const overdueTasks = pTasks.filter(t => t.isOverdue && t.status !== 'completed').length;
-            const pm = employees.find(e => e.id === p.projectManagerId);
+            const pm = allEmployees.find(e => e.id === p.projectManagerId);
             return (
               <div key={p.id} onClick={() => setSelectedProject(p)} className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
                 <div className="flex items-start justify-between mb-3">
@@ -124,11 +171,11 @@ export default function Projects() {
                 <div className="flex items-center justify-between text-xs text-gray-500">
                   <div className="flex items-center gap-3">
                     <span className="flex items-center gap-1"><Users className="w-3.5 h-3.5" /> {p.members.length}</span>
-                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> {p.targetDeliveryDate}</span>
+                    <span className="flex items-center gap-1"><Calendar className="w-3.5 h-3.5" /> Start: {p.startDate}</span>
                   </div>
                   <div className="flex items-center gap-2">
+                    {p.attachments.length > 0 && <span className="flex items-center gap-1"><Paperclip className="w-3 h-3" /> {p.attachments.length}</span>}
                     {overdueTasks > 0 && <span className="text-red-600 font-medium">{overdueTasks} overdue</span>}
-                    <span>{completedTasks}/{pTasks.length} tasks</span>
                   </div>
                 </div>
                 <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-2">
@@ -152,10 +199,10 @@ export default function Projects() {
                   <tr>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Project</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">Priority</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">Progress</th>
-                    <th className="text-left py-3 px-4 font-medium text-gray-500">Due Date</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Start</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Delivery</th>
                     <th className="text-left py-3 px-4 font-medium text-gray-500">Team</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Files</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -163,10 +210,10 @@ export default function Projects() {
                     <tr key={p.id} onClick={() => setSelectedProject(p)} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
                       <td className="py-3 px-4"><p className="font-medium text-gray-900">{p.title}</p><p className="text-xs text-gray-400">{p.projectId}</p></td>
                       <td className="py-3 px-4"><span className={`badge ${statusColors[p.status]}`}>{p.status.replace('_', ' ')}</span></td>
-                      <td className="py-3 px-4"><span className={`badge ${priorityColors[p.priority]}`}>{p.priority}</span></td>
-                      <td className="py-3 px-4"><div className="flex items-center gap-2"><div className="w-16 h-1.5 bg-gray-100 rounded-full"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-xs">{p.progress}%</span></div></td>
-                      <td className="py-3 px-4 text-gray-600">{p.targetDeliveryDate}</td>
+                      <td className="py-3 px-4 text-gray-600">{p.startDate}</td>
+                      <td className="py-3 px-4 text-gray-600">{p.targetDeliveryDate || '—'}</td>
                       <td className="py-3 px-4 text-gray-600">{p.members.length} members</td>
+                      <td className="py-3 px-4 text-gray-600">{p.attachments.length} files</td>
                     </tr>
                   ))}
                 </tbody>
@@ -197,34 +244,17 @@ export default function Projects() {
               
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
                 <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Start Date</p><p className="text-sm font-medium">{selectedProject.startDate}</p></div>
-                <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Target Delivery</p><p className="text-sm font-medium">{selectedProject.targetDeliveryDate}</p></div>
+                <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Target Delivery</p><p className="text-sm font-medium">{selectedProject.targetDeliveryDate || '—'}</p></div>
                 <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Estimated Hours</p><p className="text-sm font-medium">{selectedProject.estimatedHours}h</p></div>
                 <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Actual Hours</p><p className="text-sm font-medium">{selectedProject.actualHours}h</p></div>
               </div>
 
-              {/* Milestones */}
-              <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Target className="w-4 h-4" /> Milestones</h3>
-                <div className="space-y-2">
-                  {selectedProject.milestones.map(ms => (
-                    <div key={ms.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                      <div className={`w-3 h-3 rounded-full ${ms.status === 'completed' ? 'bg-green-500' : ms.status === 'in_progress' ? 'bg-blue-500' : ms.status === 'overdue' ? 'bg-red-500' : 'bg-gray-300'}`} />
-                      <div className="flex-1">
-                        <p className="text-sm font-medium">{ms.title}</p>
-                        <p className="text-xs text-gray-500">Due: {ms.dueDate}</p>
-                      </div>
-                      <span className={`badge ${ms.status === 'completed' ? 'bg-green-100 text-green-700' : ms.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{ms.status.replace('_', ' ')}</span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
               {/* Team Members */}
               <div>
-                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Team Members</h3>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Users className="w-4 h-4" /> Team Members ({selectedProject.members.length})</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {selectedProject.members.map(m => {
-                    const emp = employees.find(e => e.id === m.employeeId);
+                    const emp = allEmployees.find(e => e.id === m.employeeId);
                     return (
                       <div key={m.id} className="flex items-center gap-2 p-2 bg-gray-50 rounded-lg">
                         <div className="w-8 h-8 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
@@ -240,6 +270,48 @@ export default function Projects() {
                 </div>
               </div>
 
+              {/* Attachments */}
+              <div>
+                <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Paperclip className="w-4 h-4" /> Project Materials ({selectedProject.attachments.length})</h3>
+                {selectedProject.attachments.length === 0 ? (
+                  <p className="text-sm text-gray-500">No attachments</p>
+                ) : (
+                  <div className="space-y-2">
+                    {selectedProject.attachments.map(att => (
+                      <div key={att.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <FileText className="w-5 h-5 text-indigo-500" />
+                          <div>
+                            <p className="text-sm font-medium text-gray-900">{att.fileName}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(att.fileSize)} • {att.uploadedAt}</p>
+                          </div>
+                        </div>
+                        <button className="p-2 hover:bg-gray-200 rounded-lg"><Download className="w-4 h-4 text-gray-600" /></button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Milestones */}
+              {selectedProject.milestones.length > 0 && (
+                <div>
+                  <h3 className="text-sm font-semibold text-gray-900 mb-3 flex items-center gap-2"><Target className="w-4 h-4" /> Milestones</h3>
+                  <div className="space-y-2">
+                    {selectedProject.milestones.map(ms => (
+                      <div key={ms.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                        <div className={`w-3 h-3 rounded-full ${ms.status === 'completed' ? 'bg-green-500' : ms.status === 'in_progress' ? 'bg-blue-500' : ms.status === 'overdue' ? 'bg-red-500' : 'bg-gray-300'}`} />
+                        <div className="flex-1">
+                          <p className="text-sm font-medium">{ms.title}</p>
+                          <p className="text-xs text-gray-500">Due: {ms.dueDate}</p>
+                        </div>
+                        <span className={`badge ${ms.status === 'completed' ? 'bg-green-100 text-green-700' : ms.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>{ms.status.replace('_', ' ')}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
+
               {/* Project Tasks */}
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Tasks ({projectTasks(selectedProject.id).length})</h3>
@@ -252,14 +324,12 @@ export default function Projects() {
                         <div className={`w-2 h-2 rounded-full ${t.status === 'completed' ? 'bg-green-500' : t.status === 'in_progress' ? 'bg-blue-500' : t.isOverdue ? 'bg-red-500' : 'bg-gray-400'}`} />
                         <div>
                           <p className="text-sm font-medium">{t.title}</p>
-                          <p className="text-xs text-gray-500">Assigned to: {t.assigneeIds.map(id => { const e = employees.find(emp => emp.id === id); return e ? `${e.firstName} ${e.lastName}` : 'Unknown'; }).join(', ')}</p>
+                          <p className="text-xs text-gray-500">Assigned to: {t.assigneeIds.map(id => { const e = allEmployees.find(emp => emp.id === id); return e ? `${e.firstName} ${e.lastName}` : 'Unknown'; }).join(', ')}</p>
                         </div>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className={`badge ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : t.isOverdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                          {t.isOverdue && t.status !== 'completed' ? 'Overdue' : t.status.replace('_', ' ')}
-                        </span>
-                      </div>
+                      <span className={`badge ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : t.isOverdue ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                        {t.isOverdue && t.status !== 'completed' ? 'Overdue' : t.status.replace('_', ' ')}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -272,7 +342,7 @@ export default function Projects() {
       {/* Create Project Modal */}
       {showCreateModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCreateModal(false)}>
-          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold">Create New Project</h2>
               <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
@@ -288,6 +358,16 @@ export default function Projects() {
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
+                  <input type="date" className="input-field" value={newProject.startDate} onChange={e => setNewProject({...newProject, startDate: e.target.value})} />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Delivery Date (Optional)</label>
+                  <input type="date" className="input-field" value={newProject.targetDeliveryDate} onChange={e => setNewProject({...newProject, targetDeliveryDate: e.target.value})} />
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
                   <select className="input-field" value={newProject.priority} onChange={e => setNewProject({...newProject, priority: e.target.value as any})}>
                     <option value="low">Low</option>
@@ -297,26 +377,75 @@ export default function Projects() {
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Delivery Date *</label>
-                  <input type="date" className="input-field" value={newProject.targetDeliveryDate} onChange={e => setNewProject({...newProject, targetDeliveryDate: e.target.value})} />
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager *</label>
+                  <select className="input-field" value={newProject.projectManagerId} onChange={e => setNewProject({...newProject, projectManagerId: e.target.value})}>
+                    <option value="">Select manager</option>
+                    {allEmployees.filter(e => e.role === 'admin').map(e => (
+                      <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
+                    ))}
+                  </select>
                 </div>
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager *</label>
-                <select className="input-field" value={newProject.projectManagerId} onChange={e => setNewProject({...newProject, projectManagerId: e.target.value})}>
-                  <option value="">Select manager</option>
-                  {employees.filter(e => e.role === 'project_manager' || e.role === 'admin_hr').map(e => (
-                    <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
-                  ))}
-                </select>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Technology Stack</label>
                 <input className="input-field" value={newProject.technologyStack} onChange={e => setNewProject({...newProject, technologyStack: e.target.value})} placeholder="React, Laravel, MySQL (comma separated)" />
               </div>
+
+              {/* Assign Multiple Employees */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Assign Team Members</label>
+                <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto p-2 space-y-1">
+                  {allEmployees.filter(e => e.id !== newProject.projectManagerId && e.status === 'active').map(emp => (
+                    <label key={emp.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
+                      <input type="checkbox" checked={newProject.memberIds.includes(emp.id)} onChange={() => toggleMember(emp.id)} className="rounded text-indigo-600" />
+                      <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+                        {emp.firstName[0]}{emp.lastName[0]}
+                      </div>
+                      <div className="flex-1">
+                        <p className="text-sm font-medium text-gray-900">{emp.firstName} {emp.lastName}</p>
+                        <p className="text-xs text-gray-500">{emp.designation}</p>
+                      </div>
+                    </label>
+                  ))}
+                </div>
+                {newProject.memberIds.length > 0 && (
+                  <p className="text-xs text-gray-500 mt-2">{newProject.memberIds.length} member{newProject.memberIds.length > 1 ? 's' : ''} selected</p>
+                )}
+              </div>
+
+              {/* Upload Project Materials */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">Project Materials</label>
+                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-indigo-400 transition-colors">
+                  <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden" />
+                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm text-gray-600">Click to upload files or drag and drop</p>
+                  <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLS, Images, ZIP (max 10MB each)</p>
+                  <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
+                    Browse Files
+                  </button>
+                </div>
+                {attachments.length > 0 && (
+                  <div className="mt-3 space-y-2">
+                    {attachments.map(att => (
+                      <div key={att.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg">
+                        <div className="flex items-center gap-2">
+                          <FileText className="w-4 h-4 text-indigo-500" />
+                          <div>
+                            <p className="text-sm text-gray-900">{att.fileName}</p>
+                            <p className="text-xs text-gray-500">{formatFileSize(att.fileSize)}</p>
+                          </div>
+                        </div>
+                        <button onClick={() => removeAttachment(att.id)} className="text-red-500 hover:text-red-700 text-xs">Remove</button>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-2">
                 <button onClick={handleCreateProject} className="btn-primary flex-1">Create Project</button>
-                <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">Cancel</button>
+                <button onClick={() => { setShowCreateModal(false); setAttachments([]); }} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>
           </div>

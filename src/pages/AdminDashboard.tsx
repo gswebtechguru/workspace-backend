@@ -71,7 +71,7 @@ export default function AdminDashboard() {
   
   const activeProjects = projects.filter(p => p.status === 'active').length;
   const completedProjects = projects.filter(p => p.status === 'completed').length;
-  const delayedProjects = projects.filter(p => p.status === 'active' && new Date(p.targetDeliveryDate) < new Date()).length;
+  const delayedProjects = projects.filter(p => p.status === 'active' && p.targetDeliveryDate && new Date(p.targetDeliveryDate) < new Date()).length;
   
   const completedTasks = filteredTasks.filter(t => t.status === 'completed').length;
   const overdueTasks = filteredTasks.filter(t => t.isOverdue && t.status !== 'completed').length;
@@ -287,6 +287,74 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+
+      {/* Upcoming Birthdays & Work Anniversaries - Persistent Counter */}
+      {(() => {
+        const today = new Date();
+        today.setHours(0, 0, 0, 0);
+        const upcomingEvents: { type: 'birthday' | 'anniversary'; employee: typeof allEmployees[0]; date: Date; daysUntil: number; age?: number; yearsAtCompany?: number }[] = [];
+        
+        allEmployees.filter(e => e.status === 'active').forEach(emp => {
+          // Birthday check
+          if (emp.dateOfBirth) {
+            const dob = new Date(emp.dateOfBirth);
+            const thisYearBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+            if (thisYearBday < today) thisYearBday.setFullYear(today.getFullYear() + 1);
+            const daysUntil = Math.ceil((thisYearBday.getTime() - today.getTime()) / 86400000);
+            if (daysUntil <= 2 && daysUntil >= 0) {
+              const age = thisYearBday.getFullYear() - dob.getFullYear();
+              upcomingEvents.push({ type: 'birthday', employee: emp, date: thisYearBday, daysUntil, age });
+            }
+          }
+          // Work anniversary check
+          const joinDate = new Date(emp.joiningDate);
+          if (today.getFullYear() > joinDate.getFullYear()) {
+            const thisYearAnn = new Date(today.getFullYear(), joinDate.getMonth(), joinDate.getDate());
+            if (thisYearAnn < today) thisYearAnn.setFullYear(today.getFullYear() + 1);
+            const daysUntil = Math.ceil((thisYearAnn.getTime() - today.getTime()) / 86400000);
+            if (daysUntil <= 2 && daysUntil >= 0) {
+              const years = thisYearAnn.getFullYear() - joinDate.getFullYear();
+              upcomingEvents.push({ type: 'anniversary', employee: emp, date: thisYearAnn, daysUntil, yearsAtCompany: years });
+            }
+          }
+        });
+
+        if (upcomingEvents.length === 0) return null;
+
+        return (
+          <div className="card p-6 border-l-4 border-l-pink-500 bg-gradient-to-r from-pink-50 to-purple-50">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900 flex items-center gap-2">
+                🎉 Upcoming Celebrations
+              </h3>
+              <span className="badge bg-pink-100 text-pink-700">{upcomingEvents.length} event{upcomingEvents.length > 1 ? 's' : ''} in next 2 days</span>
+            </div>
+            <div className="space-y-2">
+              {upcomingEvents.map((evt, i) => (
+                <div key={i} className="flex items-center justify-between p-3 bg-white rounded-lg border border-pink-100">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-full bg-gradient-to-br from-pink-400 to-purple-500 flex items-center justify-center text-white text-sm font-bold">
+                      {evt.employee.firstName[0]}{evt.employee.lastName[0]}
+                    </div>
+                    <div>
+                      <p className="text-sm font-medium text-gray-900">{evt.employee.firstName} {evt.employee.lastName}</p>
+                      <p className="text-xs text-gray-500">
+                        {evt.type === 'birthday' ? `🎂 Birthday turning ${evt.age}` : `🎉 Work Anniversary (${evt.yearsAtCompany} year${evt.yearsAtCompany! > 1 ? 's' : ''})`}
+                      </p>
+                    </div>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-sm font-bold text-pink-700">
+                      {evt.daysUntil === 0 ? 'Today!' : evt.daysUntil === 1 ? 'Tomorrow' : `In ${evt.daysUntil} days`}
+                    </p>
+                    <p className="text-xs text-gray-500">{evt.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Attendance Overview */}
       <div className="card p-6">

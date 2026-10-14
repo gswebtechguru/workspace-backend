@@ -1,20 +1,21 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { departments } from '../data/mockData';
-import { Search, Plus, Mail, Calendar, X, UserCheck, UserX, Edit2 } from 'lucide-react';
-import { Employee, UserRole } from '../types';
+import { Search, Plus, Mail, Calendar, X, Edit2, UserCheck, UserX } from 'lucide-react';
+import { Employee } from '../types';
 
 export default function Employees() {
-  const { employees, addEmployee, toggleEmployeeStatus } = useData();
+  const { employees, addEmployee, updateEmployee, toggleEmployeeStatus } = useData();
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [newEmp, setNewEmp] = useState({
     firstName: '', lastName: '', username: '', password: '', email: '', phone: '',
     dateOfBirth: '', joiningDate: '', department: 'Engineering', designation: '',
-    role: 'employee' as UserRole, gender: 'male' as 'male' | 'female' | 'other'
+    gender: 'male' as 'male' | 'female' | 'other'
   });
 
   const filtered = employees.filter(e => {
@@ -44,7 +45,7 @@ export default function Employees() {
       joiningDate: newEmp.joiningDate,
       designation: newEmp.designation || 'Employee',
       department: newEmp.department,
-      role: newEmp.role,
+      role: 'employee', // Always employee role
       status: 'active',
       workSchedule: { id: 'ws1', name: 'Standard', workDays: [1,2,3,4,5], startTime: '09:00', endTime: '18:00', timezone: 'Asia/Kolkata' },
       expectedWorkingHours: 8,
@@ -54,14 +55,24 @@ export default function Employees() {
     setNewEmp({
       firstName: '', lastName: '', username: '', password: '', email: '', phone: '',
       dateOfBirth: '', joiningDate: '', department: 'Engineering', designation: '',
-      role: 'employee', gender: 'male'
+      gender: 'male'
     });
+  };
+
+  const handleSaveEdit = () => {
+    if (!editingEmployee) return;
+    updateEmployee(editingEmployee.id, editingEmployee);
+    setEditingEmployee(null);
+    setSelectedEmployee(null);
   };
 
   const handleToggleStatus = (empId: string, currentStatus: string) => {
     const action = currentStatus === 'active' ? 'deactivate' : 'activate';
     if (confirm(`Are you sure you want to ${action} this employee?`)) {
       toggleEmployeeStatus(empId);
+      if (selectedEmployee?.id === empId) {
+        setSelectedEmployee(prev => prev ? { ...prev, status: prev.status === 'active' ? 'inactive' : 'active' } : null);
+      }
     }
   };
 
@@ -118,7 +129,7 @@ export default function Employees() {
                 </div>
               </div>
               <div className="space-y-1.5 text-sm text-gray-500 mb-4">
-                <p className="flex items-center gap-2"><span className="font-medium text-gray-700">Username:</span> {emp.username}</p>
+                <p className="flex items-center gap-2"><span className="font-medium text-gray-700">Username:</span> @{emp.username}</p>
                 {emp.email && <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {emp.email}</p>}
                 <p className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Joined {emp.joiningDate}</p>
               </div>
@@ -130,7 +141,9 @@ export default function Employees() {
                 </div>
               )}
               <div className="flex gap-2">
-                <button onClick={() => setSelectedEmployee(emp)} className="btn-secondary flex-1 text-xs">View Details</button>
+                <button onClick={() => setSelectedEmployee(emp)} className="btn-secondary flex-1 text-xs flex items-center justify-center gap-1">
+                  <Edit2 className="w-3 h-3" /> View / Edit
+                </button>
                 <button
                   onClick={() => handleToggleStatus(emp.id, emp.status)}
                   className={`flex-1 text-xs px-3 py-2 rounded-lg font-medium transition-colors ${
@@ -146,60 +159,146 @@ export default function Employees() {
         </div>
       )}
 
-      {/* Employee Detail Modal */}
+      {/* Employee View/Edit Modal */}
       {selectedEmployee && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedEmployee(null)}>
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => { setSelectedEmployee(null); setEditingEmployee(null); }}>
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
             <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
-              <h2 className="text-lg font-semibold">Employee Profile</h2>
-              <button onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+              <h2 className="text-lg font-semibold">{editingEmployee ? 'Edit Employee' : 'Employee Profile'}</h2>
+              <button onClick={() => { setSelectedEmployee(null); setEditingEmployee(null); }} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6">
-              <div className="flex items-center gap-4 mb-6">
-                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-2xl">
-                  {selectedEmployee.firstName[0]}{selectedEmployee.lastName[0]}
-                </div>
-                <div>
-                  <h3 className="text-xl font-bold text-gray-900">{selectedEmployee.firstName} {selectedEmployee.lastName}</h3>
-                  <p className="text-gray-500">{selectedEmployee.designation}</p>
-                  <p className="text-sm text-gray-400">{selectedEmployee.employeeId}</p>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4 text-sm">
-                <div><span className="text-gray-500">Username:</span> <span className="font-medium">{selectedEmployee.username}</span></div>
-                <div><span className="text-gray-500">Email:</span> <span className="font-medium">{selectedEmployee.email || '—'}</span></div>
-                <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{selectedEmployee.phone || '—'}</span></div>
-                <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{selectedEmployee.gender || '—'}</span></div>
-                <div><span className="text-gray-500">Date of Birth:</span> <span className="font-medium">{selectedEmployee.dateOfBirth || '—'}</span></div>
-                <div><span className="text-gray-500">Joining Date:</span> <span className="font-medium">{selectedEmployee.joiningDate}</span></div>
-                <div><span className="text-gray-500">Department:</span> <span className="font-medium">{selectedEmployee.department}</span></div>
-                <div><span className="text-gray-500">Team:</span> <span className="font-medium">{selectedEmployee.team || '—'}</span></div>
-                <div><span className="text-gray-500">Status:</span> <span className={`badge ${selectedEmployee.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{selectedEmployee.status}</span></div>
-                <div><span className="text-gray-500">Role:</span> <span className="font-medium">{selectedEmployee.role.replace('_', ' ')}</span></div>
-              </div>
-              {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
-                <div className="mt-4">
-                  <p className="text-sm text-gray-500 mb-2">Skills</p>
-                  <div className="flex flex-wrap gap-2">
-                    {selectedEmployee.skills.map(s => <span key={s} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-sm rounded-lg">{s}</span>)}
+              {!editingEmployee ? (
+                <>
+                  {/* View Mode */}
+                  <div className="flex items-center gap-4 mb-6">
+                    <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-2xl">
+                      {selectedEmployee.firstName[0]}{selectedEmployee.lastName[0]}
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900">{selectedEmployee.firstName} {selectedEmployee.lastName}</h3>
+                      <p className="text-gray-500">{selectedEmployee.designation}</p>
+                      <p className="text-sm text-gray-400">{selectedEmployee.employeeId} • @{selectedEmployee.username}</p>
+                    </div>
                   </div>
-                </div>
+                  <div className="grid grid-cols-2 gap-4 text-sm mb-6">
+                    <div><span className="text-gray-500">Username:</span> <span className="font-medium">@{selectedEmployee.username}</span></div>
+                    <div><span className="text-gray-500">Email:</span> <span className="font-medium">{selectedEmployee.email || '—'}</span></div>
+                    <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{selectedEmployee.phone || '—'}</span></div>
+                    <div><span className="text-gray-500">Gender:</span> <span className="font-medium">{selectedEmployee.gender || '—'}</span></div>
+                    <div><span className="text-gray-500">Date of Birth:</span> <span className="font-medium">{selectedEmployee.dateOfBirth || '—'}</span></div>
+                    <div><span className="text-gray-500">Joining Date:</span> <span className="font-medium">{selectedEmployee.joiningDate}</span></div>
+                    <div><span className="text-gray-500">Department:</span> <span className="font-medium">{selectedEmployee.department}</span></div>
+                    <div><span className="text-gray-500">Team:</span> <span className="font-medium">{selectedEmployee.team || '—'}</span></div>
+                    <div><span className="text-gray-500">Status:</span> <span className={`badge ${selectedEmployee.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{selectedEmployee.status}</span></div>
+                  </div>
+                  {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
+                    <div className="mb-6">
+                      <p className="text-sm text-gray-500 mb-2">Skills</p>
+                      <div className="flex flex-wrap gap-2">
+                        {selectedEmployee.skills.map(s => <span key={s} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-sm rounded-lg">{s}</span>)}
+                      </div>
+                    </div>
+                  )}
+                  <div className="flex gap-3">
+                    <button onClick={() => setEditingEmployee({...selectedEmployee})} className="btn-primary flex-1 flex items-center justify-center gap-2">
+                      <Edit2 className="w-4 h-4" /> Edit Details
+                    </button>
+                    <button
+                      onClick={() => handleToggleStatus(selectedEmployee.id, selectedEmployee.status)}
+                      className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                        selectedEmployee.status === 'active'
+                          ? 'bg-red-600 text-white hover:bg-red-700'
+                          : 'bg-green-600 text-white hover:bg-green-700'
+                      }`}>
+                      {selectedEmployee.status === 'active' ? 'Deactivate' : 'Activate'}
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  {/* Edit Mode */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
+                        <input className="input-field" value={editingEmployee.firstName} onChange={e => setEditingEmployee({...editingEmployee, firstName: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
+                        <input className="input-field" value={editingEmployee.lastName} onChange={e => setEditingEmployee({...editingEmployee, lastName: e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
+                        <input className="input-field" value={editingEmployee.username} onChange={e => setEditingEmployee({...editingEmployee, username: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Employee ID</label>
+                        <input className="input-field bg-gray-50" value={editingEmployee.employeeId} disabled />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
+                        <input type="email" className="input-field" value={editingEmployee.email || ''} onChange={e => setEditingEmployee({...editingEmployee, email: e.target.value || undefined})} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                        <input className="input-field" value={editingEmployee.phone || ''} onChange={e => setEditingEmployee({...editingEmployee, phone: e.target.value || undefined})} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Date of Birth</label>
+                        <input type="date" className="input-field" value={editingEmployee.dateOfBirth || ''} onChange={e => setEditingEmployee({...editingEmployee, dateOfBirth: e.target.value || undefined})} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Gender</label>
+                        <select className="input-field" value={editingEmployee.gender || ''} onChange={e => setEditingEmployee({...editingEmployee, gender: e.target.value as any})}>
+                          <option value="male">Male</option>
+                          <option value="female">Female</option>
+                          <option value="other">Other</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Joining Date *</label>
+                        <input type="date" className="input-field" value={editingEmployee.joiningDate} onChange={e => setEditingEmployee({...editingEmployee, joiningDate: e.target.value})} />
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                        <input className="input-field" value={editingEmployee.designation} onChange={e => setEditingEmployee({...editingEmployee, designation: e.target.value})} />
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                        <select className="input-field" value={editingEmployee.department} onChange={e => setEditingEmployee({...editingEmployee, department: e.target.value})}>
+                          {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-medium text-gray-700 mb-1">Team</label>
+                        <input className="input-field" value={editingEmployee.team || ''} onChange={e => setEditingEmployee({...editingEmployee, team: e.target.value || undefined})} />
+                      </div>
+                    </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Skills (comma separated)</label>
+                      <input className="input-field" defaultValue={editingEmployee.skills?.join(', ') || ''} onBlur={e => {
+                        const skills = e.target.value.split(',').map(s => s.trim()).filter(Boolean);
+                        setEditingEmployee({...editingEmployee, skills});
+                      }} placeholder="React, TypeScript, Node.js" />
+                    </div>
+                    <div className="flex gap-3 pt-4">
+                      <button onClick={handleSaveEdit} className="btn-primary flex-1">Save Changes</button>
+                      <button onClick={() => setEditingEmployee(null)} className="btn-secondary flex-1">Cancel</button>
+                    </div>
+                  </div>
+                </>
               )}
-              <div className="mt-6 flex gap-3">
-                <button
-                  onClick={() => {
-                    handleToggleStatus(selectedEmployee.id, selectedEmployee.status);
-                    setSelectedEmployee(null);
-                  }}
-                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
-                    selectedEmployee.status === 'active'
-                      ? 'bg-red-600 text-white hover:bg-red-700'
-                      : 'bg-green-600 text-white hover:bg-green-700'
-                  }`}>
-                  {selectedEmployee.status === 'active' ? 'Deactivate Employee' : 'Activate Employee'}
-                </button>
-                <button onClick={() => setSelectedEmployee(null)} className="btn-secondary flex-1">Close</button>
-              </div>
             </div>
           </div>
         </div>
@@ -272,23 +371,13 @@ export default function Employees() {
                   </select>
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
-                  <input className="input-field" value={newEmp.designation} onChange={e => setNewEmp({...newEmp, designation: e.target.value})} placeholder="Software Developer" />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select className="input-field" value={newEmp.role} onChange={e => setNewEmp({...newEmp, role: e.target.value as UserRole})}>
-                    <option value="employee">Employee</option>
-                    <option value="project_manager">Project Manager</option>
-                    <option value="admin_hr">Admin/HR</option>
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Designation</label>
+                <input className="input-field" value={newEmp.designation} onChange={e => setNewEmp({...newEmp, designation: e.target.value})} placeholder="Software Developer" />
               </div>
               <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
                 <p className="text-xs text-blue-800">
-                  <strong>Note:</strong> System will automatically send notifications to admin 2 days before employee's date of birth and joining date anniversary.
+                  <strong>Note:</strong> System will automatically send notifications to admin 2 days before employee's birthday and work anniversary.
                 </p>
               </div>
               <div className="flex gap-3 pt-4">

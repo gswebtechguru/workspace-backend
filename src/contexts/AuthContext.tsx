@@ -16,11 +16,8 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 const rolePermissions: Record<UserRole, string[]> = {
-  super_admin: ['*'],
-  admin_hr: ['employees.view','employees.create','employees.update','projects.view','projects.create','attendance.view','attendance.correct','leave.view','leave.approve','reports.view_company','reports.export','settings.manage','announcements.manage'],
-  project_manager: ['employees.view','projects.view','projects.create','projects.assign_members','tasks.view','tasks.create','tasks.assign','tasks.complete','tasks.reopen','time_entries.create','reports.view_team','chat.send','notifications.view','attendance.view','leave.view'],
-  employee: ['tasks.view','tasks.create','tasks.complete','time_entries.create','reports.view_own','chat.send','notifications.view','attendance.view','leave.create'],
-  viewer: ['projects.view','tasks.view','reports.view_own'],
+  admin: ['*'],
+  employee: ['tasks.view','tasks.create','tasks.complete','time_entries.create','reports.view_own','chat.send','notifications.view','attendance.view','leave.create','projects.view'],
 };
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -50,7 +47,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setEmployee(emp);
     
     // Determine redirect based on role
-    const isAdminRole = emp.role === 'super_admin' || emp.role === 'admin_hr' || emp.role === 'project_manager';
+    const isAdminRole = emp.role === 'admin';
     const redirectPath = isAdminRole ? '/dashboard' : '/my-dashboard';
     
     return { success: true, redirectPath };
@@ -68,8 +65,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return perms.includes(permission);
   }, [user]);
 
-  const isAdmin = user?.role === 'super_admin' || user?.role === 'admin_hr';
-  const isManager = user?.role === 'project_manager' || isAdmin;
+  const isAdmin = user?.role === 'admin';
+  const isManager = isAdmin;
 
   return (
     <AuthContext.Provider value={{ user, employee, isAuthenticated: !!user, login, logout, hasPermission, isAdmin, isManager }}>
