@@ -1,14 +1,17 @@
 import React, { useState } from 'react';
-import { employees, departments, teams } from '../data/mockData';
-import { Search, Plus, Filter, Mail, Phone, Calendar, MoreVertical, X, UserCheck, UserX } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { departments, teams } from '../data/mockData';
+import { Search, Plus, Mail, Calendar, X } from 'lucide-react';
 import { Employee } from '../types';
 
 export default function Employees() {
+  const { employees, addEmployee } = useData();
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newEmp, setNewEmp] = useState({ firstName: '', lastName: '', email: '', phone: '', department: 'Engineering', designation: '', role: 'employee' as const });
 
   const filtered = employees.filter(e => {
     const matchSearch = !search || `${e.firstName} ${e.lastName} ${e.email} ${e.employeeId}`.toLowerCase().includes(search.toLowerCase());
@@ -16,6 +19,29 @@ export default function Employees() {
     const matchStatus = !statusFilter || e.status === statusFilter;
     return matchSearch && matchDept && matchStatus;
   });
+
+  const handleCreate = () => {
+    if (!newEmp.firstName || !newEmp.lastName || !newEmp.email) return;
+    const emp: Employee = {
+      id: `e_${Date.now()}`,
+      userId: `u_${Date.now()}`,
+      employeeId: `EMP${String(employees.length + 1).padStart(3, '0')}`,
+      firstName: newEmp.firstName,
+      lastName: newEmp.lastName,
+      email: newEmp.email,
+      phone: newEmp.phone,
+      joiningDate: new Date().toISOString().split('T')[0],
+      designation: newEmp.designation || 'Employee',
+      department: newEmp.department,
+      role: newEmp.role,
+      status: 'active',
+      workSchedule: { id: 'ws1', name: 'Standard', workDays: [1,2,3,4,5], startTime: '09:00', endTime: '18:00', timezone: 'Asia/Kolkata' },
+      expectedWorkingHours: 8,
+    };
+    addEmployee(emp);
+    setShowCreateModal(false);
+    setNewEmp({ firstName: '', lastName: '', email: '', phone: '', department: 'Engineering', designation: '', role: 'employee' });
+  };
 
   return (
     <div className="space-y-6">
@@ -49,39 +75,47 @@ export default function Employees() {
       </div>
 
       {/* Employee Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        {filtered.map(emp => (
-          <div key={emp.id} onClick={() => setSelectedEmployee(emp)} className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
-            <div className="flex items-start gap-4">
-              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                {emp.firstName[0]}{emp.lastName[0]}
+      {filtered.length === 0 ? (
+        <div className="card p-12 text-center">
+          <p className="text-gray-500">No employees found matching your criteria.</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(emp => (
+            <div key={emp.id} onClick={() => setSelectedEmployee(emp)} className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
+              <div className="flex items-start gap-4">
+                <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                  {emp.firstName[0]}{emp.lastName[0]}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <h3 className="font-semibold text-gray-900 truncate">{emp.firstName} {emp.lastName}</h3>
+                  <p className="text-sm text-gray-500 truncate">{emp.designation}</p>
+                  <span className={`badge mt-1 ${emp.status === 'active' ? 'bg-green-100 text-green-700' : emp.status === 'on_leave' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {emp.status.replace('_', ' ')}
+                  </span>
+                </div>
               </div>
-              <div className="flex-1 min-w-0">
-                <h3 className="font-semibold text-gray-900 truncate">{emp.firstName} {emp.lastName}</h3>
-                <p className="text-sm text-gray-500 truncate">{emp.designation}</p>
-                <span className={`badge mt-1 ${emp.status === 'active' ? 'bg-green-100 text-green-700' : emp.status === 'on_leave' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {emp.status.replace('_', ' ')}
-                </span>
+              <div className="mt-4 space-y-1.5 text-sm text-gray-500">
+                <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {emp.email}</p>
+                <p className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Joined {emp.joiningDate}</p>
               </div>
+              {emp.skills && emp.skills.length > 0 && (
+                <div className="mt-3 flex flex-wrap gap-1">
+                  {emp.skills.slice(0, 3).map(s => (
+                    <span key={s} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs rounded-md">{s}</span>
+                  ))}
+                </div>
+              )}
             </div>
-            <div className="mt-4 space-y-1.5 text-sm text-gray-500">
-              <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {emp.email}</p>
-              <p className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Joined {emp.joiningDate}</p>
-            </div>
-            <div className="mt-3 flex flex-wrap gap-1">
-              {emp.skills?.slice(0, 3).map(s => (
-                <span key={s} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs rounded-md">{s}</span>
-              ))}
-            </div>
-          </div>
-        ))}
-      </div>
+          ))}
+        </div>
+      )}
 
       {/* Employee Detail Modal */}
       {selectedEmployee && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedEmployee(null)}>
           <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
-            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
               <h2 className="text-lg font-semibold">Employee Profile</h2>
               <button onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
@@ -116,7 +150,7 @@ export default function Employees() {
               )}
               <div className="mt-6 flex gap-3">
                 <button className="btn-primary flex-1">Edit Profile</button>
-                <button className="btn-secondary flex-1">View Reports</button>
+                <button onClick={() => setSelectedEmployee(null)} className="btn-secondary flex-1">Close</button>
               </div>
             </div>
           </div>
@@ -133,23 +167,24 @@ export default function Employees() {
             </div>
             <div className="p-6 space-y-4">
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name</label><input className="input-field" placeholder="John" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label><input className="input-field" placeholder="Doe" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label><input className="input-field" value={newEmp.firstName} onChange={e => setNewEmp({...newEmp, firstName: e.target.value})} placeholder="John" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label><input className="input-field" value={newEmp.lastName} onChange={e => setNewEmp({...newEmp, lastName: e.target.value})} placeholder="Doe" /></div>
               </div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input className="input-field" type="email" placeholder="john@company.com" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Email *</label><input className="input-field" type="email" value={newEmp.email} onChange={e => setNewEmp({...newEmp, email: e.target.value})} placeholder="john@company.com" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
-                  <select className="input-field">{departments.map(d => <option key={d.id}>{d.name}</option>)}</select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Designation</label><input className="input-field" placeholder="Developer" /></div>
+                  <select className="input-field" value={newEmp.department} onChange={e => setNewEmp({...newEmp, department: e.target.value})}>{departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Designation</label><input className="input-field" value={newEmp.designation} onChange={e => setNewEmp({...newEmp, designation: e.target.value})} placeholder="Developer" /></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Joining Date</label><input className="input-field" type="date" /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
-                  <select className="input-field"><option>Employee</option><option>Project Manager</option><option>Admin/HR</option></select></div>
+                  <select className="input-field" value={newEmp.role} onChange={e => setNewEmp({...newEmp, role: e.target.value as any})}>
+                    <option value="employee">Employee</option><option value="project_manager">Project Manager</option><option value="admin_hr">Admin/HR</option>
+                  </select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input className="input-field" value={newEmp.phone} onChange={e => setNewEmp({...newEmp, phone: e.target.value})} placeholder="+91-XXXXXXXXXX" /></div>
               </div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input className="input-field" placeholder="+91-XXXXXXXXXX" /></div>
               <div className="flex gap-3 pt-4">
-                <button onClick={() => setShowCreateModal(false)} className="btn-primary flex-1">Create Employee</button>
+                <button onClick={handleCreate} className="btn-primary flex-1">Create Employee</button>
                 <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>

@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
-import { announcements, employees, companySettings } from '../data/mockData';
-import { Settings as SettingsIcon, Building2, Clock, Calendar, Bell, Shield, Users, Globe, Save, Plus, X, Megaphone, Trash2 } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { employees, companySettings } from '../data/mockData';
+import { Building2, Clock, Calendar, Bell, Shield, Save, Plus, X } from 'lucide-react';
+import { Announcement } from '../types';
 
 export default function SettingsPage() {
   const [activeSection, setActiveSection] = useState('general');
@@ -21,7 +24,6 @@ export default function SettingsPage() {
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">
-        {/* Settings Nav */}
         <div className="lg:w-56 flex-shrink-0">
           <nav className="card p-2 space-y-1">
             {sections.map(s => {
@@ -36,7 +38,6 @@ export default function SettingsPage() {
           </nav>
         </div>
 
-        {/* Settings Content */}
         <div className="flex-1">
           {activeSection === 'general' && (
             <div className="card p-6 space-y-6">
@@ -48,9 +49,9 @@ export default function SettingsPage() {
                     <option>Asia/Kolkata</option><option>UTC</option><option>America/New_York</option><option>Europe/London</option>
                   </select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Working Days</label>
-                  <div className="flex gap-2">
+                  <div className="flex gap-2 flex-wrap">
                     {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map((d, i) => (
-                      <label key={i} className="flex items-center gap-1 text-xs">
+                      <label key={i} className="flex items-center gap-1 text-xs bg-gray-50 px-2 py-1 rounded">
                         <input type="checkbox" defaultChecked={companySettings.workingDays.includes(i)} className="rounded" /> {d}
                       </label>
                     ))}
@@ -85,8 +86,7 @@ export default function SettingsPage() {
               </div>
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Reporting Cutoff Time</label><input className="input-field" type="time" defaultValue={companySettings.reportingCutoffTime} /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Reminder Before Cutoff (minutes)</label>
-                  <input className="input-field" type="number" defaultValue={30} /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Reminder Before Cutoff (minutes)</label><input className="input-field" type="number" defaultValue={30} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Min Time Entry (minutes)</label><input className="input-field" type="number" defaultValue={companySettings.minTimeEntryMinutes} /></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Max Time Entry (minutes)</label><input className="input-field" type="number" defaultValue={companySettings.maxTimeEntryMinutes} /></div>
               </div>
@@ -142,7 +142,27 @@ export default function SettingsPage() {
 }
 
 export function Announcements() {
+  const { announcements, addAnnouncement } = useData();
+  const { employee } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
+  const [newAnn, setNewAnn] = useState({ title: '', content: '', audience: 'all' as const, expiresAt: '' });
+
+  const handleCreate = () => {
+    if (!newAnn.title || !newAnn.content) return;
+    const ann: Announcement = {
+      id: `ann_${Date.now()}`,
+      title: newAnn.title,
+      content: newAnn.content,
+      audience: newAnn.audience,
+      publishedAt: new Date().toISOString(),
+      expiresAt: newAnn.expiresAt || undefined,
+      attachments: [],
+      createdBy: employee?.id || 'e1',
+    };
+    addAnnouncement(ann);
+    setShowCreate(false);
+    setNewAnn({ title: '', content: '', audience: 'all', expiresAt: '' });
+  };
 
   return (
     <div className="space-y-6">
@@ -154,28 +174,34 @@ export function Announcements() {
         <button onClick={() => setShowCreate(true)} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> New Announcement</button>
       </div>
 
-      <div className="space-y-4">
-        {announcements.map(ann => {
-          const creator = employees.find(e => e.id === ann.createdBy);
-          return (
-            <div key={ann.id} className="card p-5">
-              <div className="flex items-start justify-between">
-                <div>
-                  <h3 className="font-semibold text-gray-900 text-lg">{ann.title}</h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    By {creator?.firstName} {creator?.lastName} • {new Date(ann.publishedAt).toLocaleDateString()}
-                    {ann.expiresAt && ` • Expires: ${new Date(ann.expiresAt).toLocaleDateString()}`}
-                  </p>
+      {announcements.length === 0 ? (
+        <div className="card p-12 text-center">
+          <p className="text-gray-500">No announcements yet.</p>
+        </div>
+      ) : (
+        <div className="space-y-4">
+          {announcements.map(ann => {
+            const creator = employees.find(e => e.id === ann.createdBy);
+            return (
+              <div key={ann.id} className="card p-5">
+                <div className="flex items-start justify-between">
+                  <div>
+                    <h3 className="font-semibold text-gray-900 text-lg">{ann.title}</h3>
+                    <p className="text-xs text-gray-500 mt-1">
+                      By {creator?.firstName} {creator?.lastName} • {new Date(ann.publishedAt).toLocaleDateString()}
+                      {ann.expiresAt && ` • Expires: ${new Date(ann.expiresAt).toLocaleDateString()}`}
+                    </p>
+                  </div>
+                  <span className={`badge ${ann.audience === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
+                    {ann.audience === 'all' ? 'Everyone' : ann.audience}
+                  </span>
                 </div>
-                <span className={`badge ${ann.audience === 'all' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'}`}>
-                  {ann.audience === 'all' ? 'Everyone' : ann.audience}
-                </span>
+                <p className="text-sm text-gray-600 mt-3">{ann.content}</p>
               </div>
-              <p className="text-sm text-gray-600 mt-3">{ann.content}</p>
-            </div>
-          );
-        })}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {showCreate && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCreate(false)}>
@@ -185,15 +211,17 @@ export function Announcements() {
               <button onClick={() => setShowCreate(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Title</label><input className="input-field" placeholder="Announcement title" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Content</label><textarea className="input-field" rows={4} placeholder="Announcement content" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Title</label><input className="input-field" value={newAnn.title} onChange={e => setNewAnn({...newAnn, title: e.target.value})} placeholder="Announcement title" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Content</label><textarea className="input-field" rows={4} value={newAnn.content} onChange={e => setNewAnn({...newAnn, content: e.target.value})} placeholder="Announcement content" /></div>
               <div className="grid grid-cols-2 gap-4">
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Audience</label>
-                  <select className="input-field"><option>Everyone</option><option>Department</option><option>Team</option><option>Project</option></select></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Expires On</label><input className="input-field" type="date" /></div>
+                  <select className="input-field" value={newAnn.audience} onChange={e => setNewAnn({...newAnn, audience: e.target.value as any})}>
+                    <option value="all">Everyone</option><option value="department">Department</option><option value="team">Team</option><option value="project">Project</option>
+                  </select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Expires On</label><input className="input-field" type="date" value={newAnn.expiresAt} onChange={e => setNewAnn({...newAnn, expiresAt: e.target.value})} /></div>
               </div>
               <div className="flex gap-3">
-                <button onClick={() => setShowCreate(false)} className="btn-primary flex-1">Publish</button>
+                <button onClick={handleCreate} disabled={!newAnn.title || !newAnn.content} className="btn-primary flex-1 disabled:opacity-50">Publish</button>
                 <button onClick={() => setShowCreate(false)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>

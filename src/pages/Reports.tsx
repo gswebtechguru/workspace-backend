@@ -1,11 +1,12 @@
 import React, { useState } from 'react';
-import { dailyReports, employees, tasks, projects, getEmployeeName, getProjectName } from '../data/mockData';
-import { FileText, Calendar, Download, Filter, Clock, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { employees, projects, getProjectName } from '../data/mockData';
+import { Calendar, Download, Filter } from 'lucide-react';
 
 export default function Reports() {
+  const { dailyReports, tasks, projects: allProjects, employees: allEmployees } = useData();
   const [activeTab, setActiveTab] = useState<'daily' | 'project' | 'history'>('daily');
   const [selectedEmployee, setSelectedEmployee] = useState('');
-  const [dateRange, setDateRange] = useState({ from: '', to: '' });
 
   return (
     <div className="space-y-6">
@@ -26,92 +27,94 @@ export default function Reports() {
 
       {activeTab === 'daily' && (
         <div className="space-y-4">
-          {/* Filters */}
           <div className="flex flex-wrap gap-3">
             <select value={selectedEmployee} onChange={e => setSelectedEmployee(e.target.value)} className="input-field w-auto">
               <option value="">All Employees</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+              {allEmployees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
             </select>
-            <input type="date" className="input-field w-auto" />
           </div>
 
-          {/* Daily Report Cards */}
-          <div className="space-y-4">
-            {dailyReports.map(report => {
-              const emp = employees.find(e => e.id === report.employeeId);
-              const completedItems = report.items.filter(i => i.statusAtCutoff === 'completed').length;
-              const pendingItems = report.items.filter(i => i.statusAtCutoff !== 'completed' && i.statusAtCutoff !== 'cancelled').length;
-              const totalEstimated = report.items.reduce((sum, i) => sum + i.estimatedMinutes, 0);
-              const totalActual = report.items.reduce((sum, i) => sum + i.actualMinutes, 0);
-              return (
-                <div key={report.id} className="card p-5">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-700">
-                        {emp?.firstName?.[0]}{emp?.lastName?.[0]}
-                      </div>
-                      <div>
-                        <h3 className="font-semibold text-gray-900">{emp?.firstName} {emp?.lastName}</h3>
-                        <p className="text-xs text-gray-500">{report.reportDate} • Generated at {new Date(report.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <span className={`badge ${report.isComplete ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
-                        {report.isComplete ? 'Complete' : 'Incomplete'}
-                      </span>
-                      <span className="badge bg-blue-100 text-blue-700">{report.attendanceStatus}</span>
-                    </div>
-                  </div>
-
-                  {/* Summary Stats */}
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                    <div className="p-2 bg-green-50 rounded-lg text-center">
-                      <p className="text-lg font-bold text-green-700">{completedItems}</p>
-                      <p className="text-xs text-green-600">Completed</p>
-                    </div>
-                    <div className="p-2 bg-amber-50 rounded-lg text-center">
-                      <p className="text-lg font-bold text-amber-700">{pendingItems}</p>
-                      <p className="text-xs text-amber-600">Pending</p>
-                    </div>
-                    <div className="p-2 bg-blue-50 rounded-lg text-center">
-                      <p className="text-lg font-bold text-blue-700">{(totalEstimated / 60).toFixed(1)}h</p>
-                      <p className="text-xs text-blue-600">Estimated</p>
-                    </div>
-                    <div className="p-2 bg-purple-50 rounded-lg text-center">
-                      <p className="text-lg font-bold text-purple-700">{(totalActual / 60).toFixed(1)}h</p>
-                      <p className="text-xs text-purple-600">Actual</p>
-                    </div>
-                  </div>
-
-                  {/* Task Items */}
-                  <div className="space-y-2">
-                    {report.items.map(item => (
-                      <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
-                        <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.statusAtCutoff === 'completed' ? 'bg-green-500' : item.statusAtCutoff === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'}`} />
-                        <div className="flex-1 min-w-0">
-                          <p className="text-sm font-medium text-gray-900 truncate">{item.taskTitle}</p>
-                          <p className="text-xs text-gray-500">{item.projectName}</p>
+          {dailyReports.length === 0 ? (
+            <div className="card p-12 text-center">
+              <p className="text-gray-500">No daily reports generated yet.</p>
+              <p className="text-xs text-gray-400 mt-2">Reports are generated automatically at the reporting cutoff time.</p>
+            </div>
+          ) : (
+            <div className="space-y-4">
+              {dailyReports.filter(r => !selectedEmployee || r.employeeId === selectedEmployee).map(report => {
+                const emp = allEmployees.find(e => e.id === report.employeeId);
+                const completedItems = report.items.filter(i => i.statusAtCutoff === 'completed').length;
+                const pendingItems = report.items.filter(i => i.statusAtCutoff !== 'completed' && i.statusAtCutoff !== 'cancelled').length;
+                const totalEstimated = report.items.reduce((sum, i) => sum + i.estimatedMinutes, 0);
+                const totalActual = report.items.reduce((sum, i) => sum + i.actualMinutes, 0);
+                return (
+                  <div key={report.id} className="card p-5">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-full bg-indigo-100 flex items-center justify-center text-sm font-bold text-indigo-700">
+                          {emp?.firstName?.[0]}{emp?.lastName?.[0]}
                         </div>
-                        <div className="flex items-center gap-3 flex-shrink-0">
-                          <span className={`badge ${item.statusAtCutoff === 'completed' ? 'bg-green-100 text-green-700' : item.statusAtCutoff === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
-                            {item.statusAtCutoff.replace('_', ' ')}
-                          </span>
-                          {item.isCarriedForward && <span className="badge bg-amber-100 text-amber-700">Carried</span>}
-                          <span className="text-xs text-gray-500">{(item.actualMinutes / 60).toFixed(1)}h / {(item.estimatedMinutes / 60).toFixed(1)}h</span>
+                        <div>
+                          <h3 className="font-semibold text-gray-900">{emp?.firstName} {emp?.lastName}</h3>
+                          <p className="text-xs text-gray-500">{report.reportDate} • Generated at {new Date(report.generatedAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</p>
                         </div>
                       </div>
-                    ))}
+                      <div className="flex items-center gap-3">
+                        <span className={`badge ${report.isComplete ? 'bg-green-100 text-green-700' : 'bg-amber-100 text-amber-700'}`}>
+                          {report.isComplete ? 'Complete' : 'Incomplete'}
+                        </span>
+                        <span className="badge bg-blue-100 text-blue-700">{report.attendanceStatus}</span>
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                      <div className="p-2 bg-green-50 rounded-lg text-center">
+                        <p className="text-lg font-bold text-green-700">{completedItems}</p>
+                        <p className="text-xs text-green-600">Completed</p>
+                      </div>
+                      <div className="p-2 bg-amber-50 rounded-lg text-center">
+                        <p className="text-lg font-bold text-amber-700">{pendingItems}</p>
+                        <p className="text-xs text-amber-600">Pending</p>
+                      </div>
+                      <div className="p-2 bg-blue-50 rounded-lg text-center">
+                        <p className="text-lg font-bold text-blue-700">{(totalEstimated / 60).toFixed(1)}h</p>
+                        <p className="text-xs text-blue-600">Estimated</p>
+                      </div>
+                      <div className="p-2 bg-purple-50 rounded-lg text-center">
+                        <p className="text-lg font-bold text-purple-700">{(totalActual / 60).toFixed(1)}h</p>
+                        <p className="text-xs text-purple-600">Actual</p>
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      {report.items.map(item => (
+                        <div key={item.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                          <div className={`w-2 h-2 rounded-full flex-shrink-0 ${item.statusAtCutoff === 'completed' ? 'bg-green-500' : item.statusAtCutoff === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'}`} />
+                          <div className="flex-1 min-w-0">
+                            <p className="text-sm font-medium text-gray-900 truncate">{item.taskTitle}</p>
+                            <p className="text-xs text-gray-500">{item.projectName}</p>
+                          </div>
+                          <div className="flex items-center gap-3 flex-shrink-0">
+                            <span className={`badge ${item.statusAtCutoff === 'completed' ? 'bg-green-100 text-green-700' : item.statusAtCutoff === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                              {item.statusAtCutoff.replace('_', ' ')}
+                            </span>
+                            {item.isCarriedForward && <span className="badge bg-amber-100 text-amber-700">Carried</span>}
+                            <span className="text-xs text-gray-500">{(item.actualMinutes / 60).toFixed(1)}h / {(item.estimatedMinutes / 60).toFixed(1)}h</span>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
-                </div>
-              );
-            })}
-          </div>
+                );
+              })}
+            </div>
+          )}
         </div>
       )}
 
       {activeTab === 'project' && (
         <div className="space-y-4">
-          {projects.map(p => {
+          {allProjects.map(p => {
             const pTasks = tasks.filter(t => t.projectId === p.id);
             const completed = pTasks.filter(t => t.status === 'completed').length;
             const overdue = pTasks.filter(t => t.isOverdue && t.status !== 'completed').length;
@@ -147,14 +150,12 @@ export default function Reports() {
           <div className="flex flex-wrap gap-3">
             <select className="input-field w-auto">
               <option value="">All Employees</option>
-              {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+              {allEmployees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
             </select>
             <select className="input-field w-auto">
               <option value="">All Projects</option>
-              {projects.map(p => <option key={p.id}>{p.title}</option>)}
+              {allProjects.map(p => <option key={p.id}>{p.title}</option>)}
             </select>
-            <input type="date" className="input-field w-auto" />
-            <input type="date" className="input-field w-auto" />
           </div>
 
           {/* Continuously scrollable history */}
@@ -168,7 +169,7 @@ export default function Reports() {
                   <span className="text-xs text-gray-400">09:00 - 18:05 (9.1h)</span>
                 </div>
                 <div className="ml-7 space-y-2 border-l-2 border-gray-100 pl-4">
-                  {tasks.filter(t => t.scheduledDate <= date).slice(0, 3).map(t => (
+                  {tasks.filter(t => t.scheduledDate <= date).slice(0, 4).map(t => (
                     <div key={t.id} className="flex items-center gap-3 p-3 bg-white border border-gray-100 rounded-lg">
                       <div className={`w-2 h-2 rounded-full ${t.status === 'completed' ? 'bg-green-500' : t.status === 'in_progress' ? 'bg-blue-500' : 'bg-gray-400'}`} />
                       <div className="flex-1">

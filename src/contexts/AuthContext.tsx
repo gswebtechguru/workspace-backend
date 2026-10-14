@@ -1,16 +1,16 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { User, UserRole, Employee, Notification } from '../types';
-import { employees, notifications as mockNotifications } from '../data/mockData';
+import { User, UserRole, Employee } from '../types';
+import { employees } from '../data/mockData';
 
 interface AuthContextType {
   user: User | null;
   employee: Employee | null;
   isAuthenticated: boolean;
-  login: (username: string, password: string) => Promise<boolean>;
+  login: (username: string, password: string) => Promise<{ success: boolean; redirectPath: string }>;
   logout: () => void;
-  notifications: Notification[];
-  markNotificationRead: (id: string) => void;
   hasPermission: (permission: string) => boolean;
+  isAdmin: boolean;
+  isManager: boolean;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -18,7 +18,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 const rolePermissions: Record<UserRole, string[]> = {
   super_admin: ['*'],
   admin_hr: ['employees.view','employees.create','employees.update','projects.view','projects.create','attendance.view','attendance.correct','leave.view','leave.approve','reports.view_company','reports.export','settings.manage','announcements.manage'],
-  project_manager: ['projects.view','projects.create','projects.assign_members','tasks.view','tasks.create','tasks.assign','tasks.complete','tasks.reopen','time_entries.create','reports.view_team','chat.send','notifications.view'],
+  project_manager: ['employees.view','projects.view','projects.create','projects.assign_members','tasks.view','tasks.create','tasks.assign','tasks.complete','tasks.reopen','time_entries.create','reports.view_team','chat.send','notifications.view','attendance.view','leave.view'],
   employee: ['tasks.view','tasks.create','tasks.complete','time_entries.create','reports.view_own','chat.send','notifications.view','attendance.view','leave.create'],
   viewer: ['projects.view','tasks.view','reports.view_own'],
 };
@@ -26,12 +26,14 @@ const rolePermissions: Record<UserRole, string[]> = {
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
-  const [userNotifications, setUserNotifications] = useState<Notification[]>([]);
 
-  const login = useCallback(async (username: string, _password: string): Promise<boolean> => {
-    // Mock authentication - in production this calls POST /api/v1/auth/login
-    const emp = employees.find(e => e.email === username || e.employeeId === username);
-    if (!emp) return false;
+  const login = useCallback(async (username: string, _password: string): Promise<{ success: boolean; redirectPath: string }> => {
+    const emp = employees.find(e => 
+      e.email.toLowerCase() === username.toLowerCase() || 
+      e.employeeId.toLowerCase() === username.toLowerCase()
+    );
+    if (!emp) return { success: false, redirectPath: '/login' };
+    if (emp.status !== 'active') return { success: false, redirectPath: '/login' };
     
     const mockUser: User = {
       id: emp.userId,
@@ -45,18 +47,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     
     setUser(mockUser);
     setEmployee(emp);
-    setUserNotifications(mockNotifications.filter(n => n.userId === emp.userId));
-    return true;
+    
+    // Determine redirect based on role
+    const isAdminRole = emp.role === 'super_admin' || emp.role === 'admin_hr' || emp.role === 'project_manager';
+    const redirectPath = isAdminRole ? '/dashboard' : '/my-dashboard';
+    
+    return { success: true, redirectPath };
   }, []);
 
   const logout = useCallback(() => {
     setUser(null);
     setEmployee(null);
-    setUserNotifications([]);
-  }, []);
-
-  const markNotificationRead = useCallback((id: string) => {
-    setUserNotifications(prev => prev.map(n => n.id === id ? { ...n, isRead: true } : n));
   }, []);
 
   const hasPermission = useCallback((permission: string): boolean => {
@@ -66,8 +67,11 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return perms.includes(permission);
   }, [user]);
 
+  const isAdmin = user?.role === 'super_admin' || user?.role === 'admin_hr';
+  const isManager = user?.role === 'project_manager' || isAdmin;
+
   return (
-    <AuthContext.Provider value={{ user, employee, isAuthenticated: !!user, login, logout, notifications: userNotifications, markNotificationRead, hasPermission }}>
+    <AuthContext.Provider value={{ user, employee, isAuthenticated: !!user, login, logout, hasPermission, isAdmin, isManager }}>
       {children}
     </AuthContext.Provider>
   );

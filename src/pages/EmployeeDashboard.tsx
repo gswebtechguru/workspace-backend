@@ -1,10 +1,16 @@
 import React, { useState } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { tasks, projects, attendanceRecords, notifications, getProjectName } from '../data/mockData';
-import { Clock, CheckCircle2, AlertTriangle, Calendar, Plus, TrendingUp, LogOut, Bell, FolderKanban, ArrowRight } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { getProjectName } from '../data/mockData';
+import { Clock, CheckCircle2, AlertTriangle, Calendar, Plus, TrendingUp, Bell, FolderKanban, ArrowRight, X } from 'lucide-react';
 
 export default function EmployeeDashboard() {
-  const { employee, notifications: userNotifs } = useAuth();
+  const { employee } = useAuth();
+  const { tasks, projects, attendanceRecords, notifications, checkOut, completeTask } = useData();
+  const [showAddTask, setShowAddTask] = useState(false);
+  const [newTaskTitle, setNewTaskTitle] = useState('');
+  const [newTaskProject, setNewTaskProject] = useState('');
+  
   const today = new Date().toISOString().split('T')[0];
   
   if (!employee) return null;
@@ -18,7 +24,16 @@ export default function EmployeeDashboard() {
   const myProjects = projects.filter(p => p.members.some(m => m.employeeId === employee.id));
   const totalEstimatedToday = todayTasks.reduce((s, t) => s + t.estimatedMinutes, 0);
   const totalActualToday = todayTasks.reduce((s, t) => s + t.actualMinutes, 0);
+  const userNotifs = notifications.filter(n => n.userId === employee.userId);
   const unreadNotifs = userNotifs.filter(n => !n.isRead);
+
+  const handleCheckOut = () => {
+    checkOut(employee.id);
+  };
+
+  const handleCompleteTask = (taskId: string) => {
+    completeTask(taskId);
+  };
 
   return (
     <div className="space-y-6">
@@ -28,7 +43,7 @@ export default function EmployeeDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {employee.firstName}!</h1>
           <p className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Task</button>
+        <button onClick={() => setShowAddTask(true)} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Task</button>
       </div>
 
       {/* Attendance Status */}
@@ -47,7 +62,7 @@ export default function EmployeeDashboard() {
           </div>
         </div>
         {todayAttendance?.checkInAt && !todayAttendance?.checkOutAt && (
-          <button className="btn-secondary">Check Out</button>
+          <button onClick={handleCheckOut} className="btn-secondary">Check Out</button>
         )}
       </div>
 
@@ -84,21 +99,31 @@ export default function EmployeeDashboard() {
         <div className="lg:col-span-2 card p-5">
           <div className="flex items-center justify-between mb-4">
             <h3 className="font-semibold text-gray-900">Today's Tasks</h3>
-            <button className="text-sm text-indigo-600 hover:text-indigo-800 font-medium flex items-center gap-1">View All <ArrowRight className="w-3 h-3" /></button>
+            <span className="text-xs text-gray-500">{completedToday.length}/{todayTasks.length} done</span>
           </div>
           <div className="space-y-3">
             {todayTasks.length === 0 ? (
-              <p className="text-sm text-gray-500 text-center py-6">No tasks planned for today. Click "Add Task" to plan your day.</p>
+              <div className="text-center py-8">
+                <Calendar className="w-12 h-12 text-gray-300 mx-auto mb-3" />
+                <p className="text-sm text-gray-500">No tasks planned for today.</p>
+                <button onClick={() => setShowAddTask(true)} className="text-sm text-indigo-600 hover:text-indigo-800 font-medium mt-2">+ Plan your day</button>
+              </div>
             ) : todayTasks.map(t => (
-              <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors cursor-pointer">
-                <div className={`w-3 h-3 rounded-full flex-shrink-0 ${t.status === 'completed' ? 'bg-green-500' : t.status === 'in_progress' ? 'bg-blue-500' : t.isOverdue ? 'bg-red-500' : 'bg-gray-400'}`} />
+              <div key={t.id} className="flex items-center gap-3 p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
+                <button
+                  onClick={() => t.status !== 'completed' && handleCompleteTask(t.id)}
+                  className={`w-5 h-5 rounded-full border-2 flex-shrink-0 flex items-center justify-center transition-colors ${
+                    t.status === 'completed' ? 'bg-green-500 border-green-500' : 'border-gray-300 hover:border-green-500'
+                  }`}>
+                  {t.status === 'completed' && <CheckCircle2 className="w-3 h-3 text-white" />}
+                </button>
                 <div className="flex-1 min-w-0">
                   <p className={`text-sm font-medium ${t.status === 'completed' ? 'text-gray-400 line-through' : 'text-gray-900'}`}>{t.title}</p>
                   <p className="text-xs text-gray-500">{getProjectName(t.projectId)} • Est: {(t.estimatedMinutes / 60).toFixed(1)}h</p>
                 </div>
                 <div className="flex items-center gap-2">
                   {t.isOverdue && t.status !== 'completed' && <span className="badge bg-red-100 text-red-700">Overdue</span>}
-                  <span className={`badge ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : 'bg-gray-100 text-gray-600'}`}>
+                  <span className={`badge ${t.status === 'completed' ? 'bg-green-100 text-green-700' : t.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : t.status === 'on_hold' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
                     {t.status.replace('_', ' ')}
                   </span>
                 </div>
@@ -116,7 +141,9 @@ export default function EmployeeDashboard() {
               {unreadNotifs.length > 0 && <span className="badge bg-red-100 text-red-700">{unreadNotifs.length} new</span>}
             </div>
             <div className="space-y-2">
-              {userNotifs.slice(0, 4).map(n => (
+              {userNotifs.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No notifications</p>
+              ) : userNotifs.slice(0, 5).map(n => (
                 <div key={n.id} className={`p-2.5 rounded-lg text-sm ${!n.isRead ? 'bg-indigo-50' : 'bg-gray-50'}`}>
                   <p className="font-medium text-gray-900 text-xs">{n.title}</p>
                   <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
@@ -129,7 +156,9 @@ export default function EmployeeDashboard() {
           <div className="card p-5">
             <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-3"><FolderKanban className="w-4 h-4" /> My Projects</h3>
             <div className="space-y-2">
-              {myProjects.map(p => (
+              {myProjects.length === 0 ? (
+                <p className="text-sm text-gray-500 text-center py-4">No projects assigned</p>
+              ) : myProjects.map(p => (
                 <div key={p.id} className="p-2.5 bg-gray-50 rounded-lg">
                   <div className="flex items-center justify-between">
                     <p className="text-sm font-medium text-gray-900 truncate">{p.title}</p>
@@ -156,9 +185,38 @@ export default function EmployeeDashboard() {
                   <p className="text-sm font-medium text-gray-900">{t.title}</p>
                   <p className="text-xs text-gray-500">{getProjectName(t.projectId)} • Due: {t.dueDate || t.scheduledDate}</p>
                 </div>
-                <button className="text-xs text-red-600 font-medium hover:text-red-800">Update</button>
+                <button onClick={() => handleCompleteTask(t.id)} className="text-xs text-red-600 font-medium hover:text-red-800">Mark Done</button>
               </div>
             ))}
+          </div>
+        </div>
+      )}
+
+      {/* Add Task Modal */}
+      {showAddTask && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowAddTask(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Add Today's Task</h2>
+              <button onClick={() => setShowAddTask(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Task Title</label>
+                <input className="input-field" value={newTaskTitle} onChange={e => setNewTaskTitle(e.target.value)} placeholder="What do you plan to work on?" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
+                <select className="input-field" value={newTaskProject} onChange={e => setNewTaskProject(e.target.value)}>
+                  <option value="">Select project</option>
+                  {myProjects.map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={() => { setShowAddTask(false); setNewTaskTitle(''); setNewTaskProject(''); }} className="btn-primary flex-1">Add Task</button>
+                <button onClick={() => setShowAddTask(false)} className="btn-secondary flex-1">Cancel</button>
+              </div>
+            </div>
           </div>
         </div>
       )}

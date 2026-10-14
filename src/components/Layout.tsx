@@ -1,9 +1,10 @@
-import React, { useState, ReactNode } from 'react';
+import React, { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
-import { LayoutDashboard, Users, FolderKanban, CheckSquare, Clock, MessageSquare, FileText, Bell, Settings, LogOut, Menu, X, ChevronDown, Search, Building2, CalendarDays, Megaphone } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { LayoutDashboard, Users, FolderKanban, CheckSquare, Clock, MessageSquare, FileText, Bell, Settings, LogOut, Menu, X, ChevronDown, Search, Building2, Megaphone } from 'lucide-react';
 
-interface LayoutProps { children: ReactNode; }
+interface LayoutProps { children: React.ReactNode; }
 
 const adminNav = [
   { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
@@ -27,22 +28,22 @@ const employeeNav = [
 ];
 
 export default function Layout({ children }: LayoutProps) {
-  const { user, employee, logout, notifications, markNotificationRead, hasPermission } = useAuth();
+  const { user, employee, logout, isManager } = useAuth();
+  const { notifications, markNotificationRead } = useData();
   const location = useLocation();
   const navigate = useNavigate();
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [showNotifications, setShowNotifications] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
-  const isAdmin = user?.role === 'super_admin' || user?.role === 'admin_hr' || user?.role === 'project_manager';
-  const navItems = isAdmin ? adminNav : employeeNav;
-  const unreadCount = notifications.filter(n => !n.isRead).length;
+  const navItems = isManager ? adminNav : employeeNav;
+  const userNotifs = notifications.filter(n => n.userId === user?.id);
+  const unreadCount = userNotifs.filter(n => !n.isRead).length;
 
   const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
-    <div className="flex h-screen bg-gray-50">
+    <div className="flex h-screen bg-gray-50 overflow-hidden">
       {/* Sidebar */}
       <aside className={`fixed inset-y-0 left-0 z-50 w-64 bg-gradient-to-b from-slate-900 to-slate-800 text-white transform transition-transform duration-200 lg:translate-x-0 lg:static lg:in-auto ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
         <div className="flex items-center gap-3 px-6 py-5 border-b border-white/10">
@@ -58,7 +59,7 @@ export default function Layout({ children }: LayoutProps) {
             const isActive = location.pathname === item.path || location.pathname.startsWith(item.path + '/');
             return (
               <Link key={item.path} to={item.path} onClick={() => setSidebarOpen(false)}
-                className={`sidebar-link ${isActive ? 'active bg-white/15' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}>
+                className={`flex items-center gap-3 px-3 py-2 rounded-lg text-sm font-medium transition-colors ${isActive ? 'bg-white/15 text-white' : 'text-slate-300 hover:text-white hover:bg-white/10'}`}>
                 <Icon className="w-5 h-5" />
                 <span>{item.label}</span>
               </Link>
@@ -82,17 +83,16 @@ export default function Layout({ children }: LayoutProps) {
       {sidebarOpen && <div className="fixed inset-0 z-40 bg-black/50 lg:hidden" onClick={() => setSidebarOpen(false)} />}
 
       {/* Main content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center gap-4 sticky top-0 z-30">
+        <header className="bg-white border-b border-gray-200 px-4 lg:px-6 py-3 flex items-center gap-4 sticky top-0 z-30 flex-shrink-0">
           <button onClick={() => setSidebarOpen(true)} className="lg:hidden p-2 rounded-lg hover:bg-gray-100">
             <Menu className="w-5 h-5" />
           </button>
           
-          {/* Search */}
-          <div className="flex-1 max-w-md relative">
+          <div className="flex-1 max-w-md relative hidden sm:block">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Search employees, projects, tasks..." value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+            <input type="text" placeholder="Search employees, projects, tasks..."
               className="w-full pl-10 pr-4 py-2 bg-gray-50 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white" />
           </div>
 
@@ -108,9 +108,9 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-gray-100 font-semibold text-sm">Notifications</div>
                   <div className="max-h-80 overflow-y-auto">
-                    {notifications.length === 0 ? (
+                    {userNotifs.length === 0 ? (
                       <p className="px-4 py-6 text-sm text-gray-500 text-center">No notifications</p>
-                    ) : notifications.map(n => (
+                    ) : userNotifs.map(n => (
                       <div key={n.id} onClick={() => markNotificationRead(n.id)}
                         className={`px-4 py-3 border-b border-gray-50 cursor-pointer hover:bg-gray-50 ${!n.isRead ? 'bg-indigo-50/50' : ''}`}>
                         <p className="text-sm font-medium text-gray-900">{n.title}</p>
@@ -136,7 +136,7 @@ export default function Layout({ children }: LayoutProps) {
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-medium">{employee?.firstName} {employee?.lastName}</p>
                     <p className="text-xs text-gray-500">{employee?.email}</p>
-                    <span className="badge bg-indigo-100 text-indigo-700 mt-1">{user?.role?.replace('_', ' ')}</span>
+                    <span className="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full mt-1">{user?.role?.replace('_', ' ')}</span>
                   </div>
                   <div className="py-1">
                     <button onClick={() => { navigate('/profile'); setShowProfile(false); }} className="w-full px-4 py-2 text-left text-sm hover:bg-gray-50">My Profile</button>

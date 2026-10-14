@@ -1,23 +1,32 @@
 import React, { useState } from 'react';
-import { tasks, projects, employees, getEmployeeName, getProjectName } from '../data/mockData';
-import { Search, Plus, Filter, Clock, Calendar, AlertTriangle, CheckCircle2, XCircle, Pause, ChevronDown, X, Flag } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { useAuth } from '../contexts/AuthContext';
+import { projects, employees, getEmployeeName, getProjectName } from '../data/mockData';
+import { Search, Plus, AlertTriangle, CheckCircle2, Clock, Calendar, XCircle, Pause, X } from 'lucide-react';
 import { Task, TaskStatus } from '../types';
 
-const statusConfig: Record<TaskStatus, { color: string; icon: React.ElementType }> = {
-  planned: { color: 'bg-gray-100 text-gray-700', icon: Calendar },
-  in_progress: { color: 'bg-blue-100 text-blue-700', icon: Clock },
-  completed: { color: 'bg-green-100 text-green-700', icon: CheckCircle2 },
-  on_hold: { color: 'bg-amber-100 text-amber-700', icon: Pause },
-  cancelled: { color: 'bg-red-100 text-red-700', icon: XCircle },
+const statusConfig: Record<TaskStatus, { color: string }> = {
+  planned: { color: 'bg-gray-100 text-gray-700' },
+  in_progress: { color: 'bg-blue-100 text-blue-700' },
+  completed: { color: 'bg-green-100 text-green-700' },
+  on_hold: { color: 'bg-amber-100 text-amber-700' },
+  cancelled: { color: 'bg-red-100 text-red-700' },
 };
 
 export default function Tasks() {
+  const { tasks, addTask, completeTask, reopenTask, addTimeEntry } = useData();
+  const { employee } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [projectFilter, setProjectFilter] = useState('');
   const [selectedTask, setSelectedTask] = useState<Task | null>(null);
   const [viewMode, setViewMode] = useState<'list' | 'kanban'>('list');
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showReopenModal, setShowReopenModal] = useState(false);
+  const [showTimeModal, setShowTimeModal] = useState(false);
+  const [reopenReason, setReopenReason] = useState('');
+  const [timeEntry, setTimeEntry] = useState({ minutes: 0, description: '' });
+  const [newTask, setNewTask] = useState({ title: '', description: '', projectId: '', priority: 'medium' as const, dueDate: '', estimatedHours: 4, assigneeId: '' });
 
   const filtered = tasks.filter(t => {
     const matchSearch = !search || t.title.toLowerCase().includes(search.toLowerCase());
@@ -26,7 +35,66 @@ export default function Tasks() {
     return matchSearch && matchStatus && matchProject;
   });
 
-  const kanbanColumns: TaskStatus[] = ['planned', 'in_progress', 'on_hold', 'completed', 'cancelled'];
+  const kanbanColumns: TaskStatus[] = ['planned', 'in_progress', 'on_hold', 'completed'];
+
+  const handleCreateTask = () => {
+    if (!newTask.title || !newTask.projectId) return;
+    const today = new Date().toISOString().split('T')[0];
+    const task: Task = {
+      id: `t_${Date.now()}`,
+      taskId: `TSK${String(tasks.length + 1).padStart(3, '0')}`,
+      title: newTask.title,
+      description: newTask.description,
+      projectId: newTask.projectId,
+      creatorId: employee?.id || 'e1',
+      assigneeIds: [newTask.assigneeId || employee?.id || 'e1'],
+      scheduledDate: today,
+      createdAt: new Date().toISOString(),
+      dueDate: newTask.dueDate || today,
+      estimatedMinutes: newTask.estimatedHours * 60,
+      actualMinutes: 0,
+      priority: newTask.priority,
+      status: 'planned',
+      isOverdue: false,
+      statusHistory: [{ id: `sh_${Date.now()}`, fromStatus: null, toStatus: 'planned', changedBy: employee?.id || 'e1', changedAt: new Date().toISOString() }],
+      timeEntries: [],
+    };
+    addTask(task);
+    setShowCreateModal(false);
+    setNewTask({ title: '', description: '', projectId: '', priority: 'medium', dueDate: '', estimatedHours: 4, assigneeId: '' });
+  };
+
+  const handleComplete = (taskId: string) => {
+    completeTask(taskId);
+    if (selectedTask?.id === taskId) {
+      setSelectedTask(prev => prev ? { ...prev, status: 'completed', completedAt: new Date().toISOString() } : null);
+    }
+  };
+
+  const handleReopen = () => {
+    if (!selectedTask || !reopenReason) return;
+    reopenTask(selectedTask.id, reopenReason);
+    setShowReopenModal(false);
+    setReopenReason('');
+    setSelectedTask(prev => prev ? { ...prev, status: 'in_progress', completedAt: undefined } : null);
+  };
+
+  const handleAddTime = () => {
+    if (!selectedTask || timeEntry.minutes <= 0) return;
+    const entry = {
+      id: `te_${Date.now()}`,
+      taskId: selectedTask.id,
+      employeeId: employee?.id || 'e1',
+      workDate: new Date().toISOString().split('T')[0],
+      durationMinutes: timeEntry.minutes,
+      description: timeEntry.description,
+      createdAt: new Date().toISOString(),
+    };
+    addTimeEntry(entry);
+    setShowTimeModal(false);
+    setTimeEntry({ minutes: 0, description: '' });
+    setSelectedTask(prev => prev ? { ...prev, actualMinutes: prev.actualMinutes + timeEntry.minutes, timeEntries: [...prev.timeEntries, entry] } : null);
+  };
 
   return (
     <div className="space-y-6">
@@ -62,55 +130,57 @@ export default function Tasks() {
 
       {viewMode === 'list' ? (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Task</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Project</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Assignee</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Due Date</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(t => {
-                const config = statusConfig[t.status];
-                return (
-                  <tr key={t.id} onClick={() => setSelectedTask(t)} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
-                    <td className="py-3 px-4">
-                      <div className="flex items-center gap-2">
-                        {t.isOverdue && t.status !== 'completed' && <AlertTriangle className="w-4 h-4 text-red-500" />}
-                        <div>
-                          <p className="font-medium text-gray-900">{t.title}</p>
-                          <p className="text-xs text-gray-400">{t.taskId}</p>
-                        </div>
-                      </div>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600">{getProjectName(t.projectId)}</td>
-                    <td className="py-3 px-4 text-gray-600">{t.assigneeIds.map(id => getEmployeeName(id)).join(', ')}</td>
-                    <td className="py-3 px-4"><span className={`badge ${config.color}`}>{t.status.replace('_', ' ')}</span></td>
-                    <td className="py-3 px-4">
-                      <span className={t.isOverdue && t.status !== 'completed' ? 'text-red-600 font-medium' : 'text-gray-600'}>{t.dueDate || t.scheduledDate}</span>
-                    </td>
-                    <td className="py-3 px-4 text-gray-600 text-xs">
-                      {Math.round(t.actualMinutes / 60 * 10) / 10}h / {Math.round(t.estimatedMinutes / 60 * 10) / 10}h
-                    </td>
+          {filtered.length === 0 ? (
+            <p className="text-center py-12 text-gray-500">No tasks found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Task</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 hidden md:table-cell">Project</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 hidden lg:table-cell">Assignee</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 hidden sm:table-cell">Due</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500 hidden lg:table-cell">Time</th>
                   </tr>
-                );
-              })}
-            </tbody>
-          </table>
+                </thead>
+                <tbody>
+                  {filtered.map(t => (
+                    <tr key={t.id} onClick={() => setSelectedTask(t)} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
+                      <td className="py-3 px-4">
+                        <div className="flex items-center gap-2">
+                          {t.isOverdue && t.status !== 'completed' && <AlertTriangle className="w-4 h-4 text-red-500 flex-shrink-0" />}
+                          <div>
+                            <p className="font-medium text-gray-900">{t.title}</p>
+                            <p className="text-xs text-gray-400">{t.taskId}</p>
+                          </div>
+                        </div>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 hidden md:table-cell">{getProjectName(t.projectId)}</td>
+                      <td className="py-3 px-4 text-gray-600 hidden lg:table-cell">{t.assigneeIds.map(id => getEmployeeName(id)).join(', ')}</td>
+                      <td className="py-3 px-4"><span className={`badge ${statusConfig[t.status].color}`}>{t.status.replace('_', ' ')}</span></td>
+                      <td className="py-3 px-4 hidden sm:table-cell">
+                        <span className={t.isOverdue && t.status !== 'completed' ? 'text-red-600 font-medium' : 'text-gray-600'}>{t.dueDate || t.scheduledDate}</span>
+                      </td>
+                      <td className="py-3 px-4 text-gray-600 text-xs hidden lg:table-cell">
+                        {(t.actualMinutes / 60).toFixed(1)}h / {(t.estimatedMinutes / 60).toFixed(1)}h
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       ) : (
         <div className="flex gap-4 overflow-x-auto pb-4">
           {kanbanColumns.map(status => {
             const colTasks = filtered.filter(t => t.status === status);
-            const config = statusConfig[status];
             return (
               <div key={status} className="flex-shrink-0 w-72">
                 <div className="flex items-center gap-2 mb-3">
-                  <span className={`badge ${config.color}`}>{status.replace('_', ' ')}</span>
+                  <span className={`badge ${statusConfig[status].color}`}>{status.replace('_', ' ')}</span>
                   <span className="text-xs text-gray-400">{colTasks.length}</span>
                 </div>
                 <div className="space-y-2">
@@ -132,6 +202,7 @@ export default function Tasks() {
                       </div>
                     </div>
                   ))}
+                  {colTasks.length === 0 && <p className="text-xs text-gray-400 text-center py-4">No tasks</p>}
                 </div>
               </div>
             );
@@ -161,14 +232,14 @@ export default function Tasks() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Project</p><p className="text-sm font-medium">{getProjectName(selectedTask.projectId)}</p></div>
-                <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Scheduled Date</p><p className="text-sm font-medium">{selectedTask.scheduledDate}</p></div>
+                <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Scheduled</p><p className="text-sm font-medium">{selectedTask.scheduledDate}</p></div>
                 <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Due Date</p><p className="text-sm font-medium">{selectedTask.dueDate || '—'}</p></div>
-                <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Completed At</p><p className="text-sm font-medium">{selectedTask.completedAt || '—'}</p></div>
+                <div className="p-3 bg-gray-50 rounded-lg"><p className="text-xs text-gray-500">Completed</p><p className="text-sm font-medium">{selectedTask.completedAt ? new Date(selectedTask.completedAt).toLocaleDateString() : '—'}</p></div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div className="p-3 bg-blue-50 rounded-lg"><p className="text-xs text-blue-600">Estimated Time</p><p className="text-lg font-bold text-blue-700">{Math.round(selectedTask.estimatedMinutes / 60 * 10) / 10}h</p></div>
-                <div className="p-3 bg-green-50 rounded-lg"><p className="text-xs text-green-600">Actual Time</p><p className="text-lg font-bold text-green-700">{Math.round(selectedTask.actualMinutes / 60 * 10) / 10}h</p></div>
+                <div className="p-3 bg-blue-50 rounded-lg"><p className="text-xs text-blue-600">Estimated Time</p><p className="text-lg font-bold text-blue-700">{(selectedTask.estimatedMinutes / 60).toFixed(1)}h</p></div>
+                <div className="p-3 bg-green-50 rounded-lg"><p className="text-xs text-green-600">Actual Time</p><p className="text-lg font-bold text-green-700">{(selectedTask.actualMinutes / 60).toFixed(1)}h</p></div>
               </div>
 
               <div>
@@ -196,6 +267,7 @@ export default function Tasks() {
                     <div key={sh.id} className="flex items-center gap-3 text-sm">
                       <div className="w-2 h-2 rounded-full bg-indigo-400" />
                       <span className="text-gray-600">{sh.fromStatus || 'Created'} → <span className="font-medium">{sh.toStatus.replace('_', ' ')}</span></span>
+                      {sh.reason && <span className="text-xs text-amber-600">({sh.reason})</span>}
                       <span className="text-gray-400 text-xs ml-auto">{new Date(sh.changedAt).toLocaleString()}</span>
                     </div>
                   ))}
@@ -210,18 +282,66 @@ export default function Tasks() {
                     {selectedTask.timeEntries.map(te => (
                       <div key={te.id} className="flex items-center justify-between p-2 bg-gray-50 rounded-lg text-sm">
                         <span className="text-gray-600">{te.workDate}</span>
-                        <span className="font-medium">{Math.round(te.durationMinutes / 60 * 10) / 10}h</span>
-                        {te.description && <span className="text-gray-400 text-xs">{te.description}</span>}
+                        <span className="font-medium">{(te.durationMinutes / 60).toFixed(1)}h</span>
+                        {te.description && <span className="text-gray-400 text-xs truncate ml-2">{te.description}</span>}
                       </div>
                     ))}
                   </div>
                 </div>
               )}
 
-              <div className="flex gap-3 pt-2">
-                {selectedTask.status !== 'completed' && <button className="btn-primary flex-1">Mark Complete</button>}
-                {selectedTask.status === 'completed' && <button className="btn-secondary flex-1">Reopen Task</button>}
-                <button className="btn-secondary flex-1">Add Time Entry</button>
+              <div className="flex flex-wrap gap-3 pt-2">
+                {selectedTask.status !== 'completed' && (
+                  <button onClick={() => handleComplete(selectedTask.id)} className="btn-primary flex-1">Mark Complete</button>
+                )}
+                {selectedTask.status === 'completed' && (
+                  <button onClick={() => setShowReopenModal(true)} className="btn-secondary flex-1">Reopen Task</button>
+                )}
+                <button onClick={() => setShowTimeModal(true)} className="btn-secondary flex-1">Add Time Entry</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Reopen Modal */}
+      {showReopenModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowReopenModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold">Reopen Task</h2>
+              <p className="text-sm text-gray-500 mt-1">Please provide a reason for reopening this task.</p>
+            </div>
+            <div className="p-6 space-y-4">
+              <textarea className="input-field" rows={3} value={reopenReason} onChange={e => setReopenReason(e.target.value)} placeholder="Reason for reopening..." />
+              <div className="flex gap-3">
+                <button onClick={handleReopen} disabled={!reopenReason.trim()} className="btn-primary flex-1 disabled:opacity-50">Reopen</button>
+                <button onClick={() => setShowReopenModal(false)} className="btn-secondary flex-1">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Time Entry Modal */}
+      {showTimeModal && (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/50" onClick={() => setShowTimeModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100">
+              <h2 className="text-lg font-semibold">Add Time Entry</h2>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Duration (minutes)</label>
+                <input type="number" className="input-field" value={timeEntry.minutes || ''} onChange={e => setTimeEntry({...timeEntry, minutes: parseInt(e.target.value) || 0})} placeholder="60" min="1" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description (optional)</label>
+                <textarea className="input-field" rows={2} value={timeEntry.description} onChange={e => setTimeEntry({...timeEntry, description: e.target.value})} placeholder="What did you work on?" />
+              </div>
+              <div className="flex gap-3">
+                <button onClick={handleAddTime} disabled={timeEntry.minutes <= 0} className="btn-primary flex-1 disabled:opacity-50">Save Entry</button>
+                <button onClick={() => setShowTimeModal(false)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>
           </div>
@@ -237,25 +357,30 @@ export default function Tasks() {
               <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
             </div>
             <div className="p-6 space-y-4">
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Title</label><input className="input-field" placeholder="Task title" /></div>
-              <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea className="input-field" rows={3} placeholder="Task description" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Title *</label><input className="input-field" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} placeholder="Task title" /></div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Description</label><textarea className="input-field" rows={3} value={newTask.description} onChange={e => setNewTask({...newTask, description: e.target.value})} placeholder="Task description" /></div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Project</label>
-                  <select className="input-field">{projects.map(p => <option key={p.id}>{p.title}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Project *</label>
+                  <select className="input-field" value={newTask.projectId} onChange={e => setNewTask({...newTask, projectId: e.target.value})}>
+                    <option value="">Select project</option>
+                    {projects.filter(p => p.status === 'active').map(p => <option key={p.id} value={p.id}>{p.title}</option>)}
+                  </select></div>
                 <div><label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select className="input-field"><option>Low</option><option>Medium</option><option>High</option><option>Critical</option></select></div>
+                  <select className="input-field" value={newTask.priority} onChange={e => setNewTask({...newTask, priority: e.target.value as any})}>
+                    <option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option>
+                  </select></div>
               </div>
               <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Scheduled Date</label><input className="input-field" type="date" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label><input className="input-field" type="date" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Due Date</label><input className="input-field" type="date" value={newTask.dueDate} onChange={e => setNewTask({...newTask, dueDate: e.target.value})} /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Estimated Hours</label><input className="input-field" type="number" value={newTask.estimatedHours} onChange={e => setNewTask({...newTask, estimatedHours: parseInt(e.target.value) || 0})} /></div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Estimated Hours</label><input className="input-field" type="number" placeholder="4" /></div>
-                <div><label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
-                  <select className="input-field">{employees.map(e => <option key={e.id}>{e.firstName} {e.lastName}</option>)}</select></div>
-              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Assign To</label>
+                <select className="input-field" value={newTask.assigneeId} onChange={e => setNewTask({...newTask, assigneeId: e.target.value})}>
+                  <option value="">Self</option>
+                  {employees.map(e => <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>)}
+                </select></div>
               <div className="flex gap-3 pt-2">
-                <button onClick={() => setShowCreateModal(false)} className="btn-primary flex-1">Create Task</button>
+                <button onClick={handleCreateTask} disabled={!newTask.title || !newTask.projectId} className="btn-primary flex-1 disabled:opacity-50">Create Task</button>
                 <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>

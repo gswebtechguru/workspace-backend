@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { projects, employees, tasks, getEmployeeName } from '../data/mockData';
-import { Search, Plus, Filter, Calendar, Users, Clock, ArrowRight, ChevronRight, X, Flag, Target } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { employees } from '../data/mockData';
+import { Search, Plus, Users, Calendar, X, Target } from 'lucide-react';
 import { Project, ProjectStatus } from '../types';
 
 const statusColors: Record<ProjectStatus, string> = {
@@ -16,6 +16,7 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function Projects() {
+  const { projects, tasks } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
@@ -62,7 +63,7 @@ export default function Projects() {
           {filtered.map(p => {
             const pTasks = projectTasks(p.id);
             const completedTasks = pTasks.filter(t => t.status === 'completed').length;
-            const overdueTasks = pTasks.filter(t => t.isOverdue).length;
+            const overdueTasks = pTasks.filter(t => t.isOverdue && t.status !== 'completed').length;
             const pm = employees.find(e => e.id === p.projectManagerId);
             return (
               <div key={p.id} onClick={() => setSelectedProject(p)} className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
@@ -107,30 +108,36 @@ export default function Projects() {
         </div>
       ) : (
         <div className="card overflow-hidden">
-          <table className="w-full text-sm">
-            <thead className="bg-gray-50">
-              <tr>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Project</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Priority</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Progress</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Due Date</th>
-                <th className="text-left py-3 px-4 font-medium text-gray-500">Team</th>
-              </tr>
-            </thead>
-            <tbody>
-              {filtered.map(p => (
-                <tr key={p.id} onClick={() => setSelectedProject(p)} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
-                  <td className="py-3 px-4"><p className="font-medium text-gray-900">{p.title}</p><p className="text-xs text-gray-400">{p.projectId}</p></td>
-                  <td className="py-3 px-4"><span className={`badge ${statusColors[p.status]}`}>{p.status.replace('_', ' ')}</span></td>
-                  <td className="py-3 px-4"><span className={`badge ${priorityColors[p.priority]}`}>{p.priority}</span></td>
-                  <td className="py-3 px-4"><div className="flex items-center gap-2"><div className="w-16 h-1.5 bg-gray-100 rounded-full"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-xs">{p.progress}%</span></div></td>
-                  <td className="py-3 px-4 text-gray-600">{p.targetDeliveryDate}</td>
-                  <td className="py-3 px-4 text-gray-600">{p.members.length} members</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+          {filtered.length === 0 ? (
+            <p className="text-center py-12 text-gray-500">No projects found</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-sm">
+                <thead className="bg-gray-50">
+                  <tr>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Project</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Status</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Priority</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Progress</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Due Date</th>
+                    <th className="text-left py-3 px-4 font-medium text-gray-500">Team</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filtered.map(p => (
+                    <tr key={p.id} onClick={() => setSelectedProject(p)} className="border-t border-gray-100 hover:bg-gray-50 cursor-pointer">
+                      <td className="py-3 px-4"><p className="font-medium text-gray-900">{p.title}</p><p className="text-xs text-gray-400">{p.projectId}</p></td>
+                      <td className="py-3 px-4"><span className={`badge ${statusColors[p.status]}`}>{p.status.replace('_', ' ')}</span></td>
+                      <td className="py-3 px-4"><span className={`badge ${priorityColors[p.priority]}`}>{p.priority}</span></td>
+                      <td className="py-3 px-4"><div className="flex items-center gap-2"><div className="w-16 h-1.5 bg-gray-100 rounded-full"><div className="h-full bg-indigo-500 rounded-full" style={{ width: `${p.progress}%` }} /></div><span className="text-xs">{p.progress}%</span></div></td>
+                      <td className="py-3 px-4 text-gray-600">{p.targetDeliveryDate}</td>
+                      <td className="py-3 px-4 text-gray-600">{p.members.length} members</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
         </div>
       )}
 
@@ -202,13 +209,15 @@ export default function Projects() {
               <div>
                 <h3 className="text-sm font-semibold text-gray-900 mb-3">Tasks ({projectTasks(selectedProject.id).length})</h3>
                 <div className="space-y-2">
-                  {projectTasks(selectedProject.id).map(t => (
+                  {projectTasks(selectedProject.id).length === 0 ? (
+                    <p className="text-sm text-gray-500 text-center py-4">No tasks yet</p>
+                  ) : projectTasks(selectedProject.id).map(t => (
                     <div key={t.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                       <div className="flex items-center gap-3">
                         <div className={`w-2 h-2 rounded-full ${t.status === 'completed' ? 'bg-green-500' : t.status === 'in_progress' ? 'bg-blue-500' : t.isOverdue ? 'bg-red-500' : 'bg-gray-400'}`} />
                         <div>
                           <p className="text-sm font-medium">{t.title}</p>
-                          <p className="text-xs text-gray-500">Assigned to: {t.assigneeIds.map(id => getEmployeeName(id)).join(', ')}</p>
+                          <p className="text-xs text-gray-500">Assigned to: {t.assigneeIds.map(id => { const e = employees.find(emp => emp.id === id); return e ? `${e.firstName} ${e.lastName}` : 'Unknown'; }).join(', ')}</p>
                         </div>
                       </div>
                       <div className="flex items-center gap-2">

@@ -1,21 +1,14 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Users, FolderKanban, CheckSquare, Clock, AlertTriangle, TrendingUp, Calendar, FileWarning, ArrowUpRight, ArrowDownRight, BarChart3 } from 'lucide-react';
-import { dashboardMetrics, projects, tasks, employees, attendanceRecords, leaveRequests } from '../data/mockData';
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, LineChart, Line, Area, AreaChart } from 'recharts';
+import { useData } from '../contexts/DataContext';
+import { employees } from '../data/mockData';
+import { Users, FolderKanban, CheckSquare, Clock, AlertTriangle, FileWarning, ArrowUpRight, ArrowDownRight, BarChart3, Calendar, Target } from 'lucide-react';
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { DateFilter } from '../types';
 
 const dateFilters: { value: DateFilter; label: string }[] = [
   { value: 'today', label: 'Today' }, { value: 'this_week', label: 'This Week' },
   { value: 'this_month', label: 'This Month' }, { value: 'last_month', label: 'Last Month' },
-];
-
-const taskStatusData = [
-  { name: 'Completed', value: 24, color: '#10b981' },
-  { name: 'In Progress', value: 18, color: '#3b82f6' },
-  { name: 'Planned', value: 12, color: '#f59e0b' },
-  { name: 'Blocked', value: 4, color: '#ef4444' },
-  { name: 'Overdue', value: 3, color: '#dc2626' },
 ];
 
 const weeklyCompletion = [
@@ -25,24 +18,51 @@ const weeklyCompletion = [
   { day: 'Sun', completed: 0, planned: 0 },
 ];
 
-const projectProgress = [
-  { name: 'E-Commerce', estimated: 2400, actual: 1680 },
-  { name: 'Mobile Banking', estimated: 3200, actual: 1200 },
-  { name: 'HR Portal', estimated: 800, actual: 520 },
-  { name: 'Analytics', estimated: 1200, actual: 600 },
-];
-
 export default function AdminDashboard() {
+  const { tasks, projects, attendanceRecords, leaveRequests, employees: allEmployees } = useData();
   const [dateFilter, setDateFilter] = useState<DateFilter>('today');
-  const m = dashboardMetrics;
+  const today = new Date().toISOString().split('T')[0];
+
+  // Calculate metrics dynamically
+  const todayAttendance = attendanceRecords.filter(a => a.workDate === today);
+  const presentToday = todayAttendance.filter(a => a.status === 'present' || a.status === 'late').length;
+  const absentToday = todayAttendance.filter(a => a.status === 'absent').length;
+  const notCheckedIn = allEmployees.filter(e => e.status === 'active').length - todayAttendance.length;
+  
+  const activeProjects = projects.filter(p => p.status === 'active').length;
+  const completedProjects = projects.filter(p => p.status === 'completed').length;
+  const delayedProjects = projects.filter(p => p.status === 'active' && new Date(p.targetDeliveryDate) < new Date()).length;
+  
+  const completedTasks = tasks.filter(t => t.status === 'completed').length;
+  const overdueTasks = tasks.filter(t => t.isOverdue && t.status !== 'completed').length;
+  const blockedTasks = tasks.filter(t => t.status === 'on_hold').length;
+  const plannedTasks = tasks.filter(t => t.status === 'planned').length;
+  
+  const pendingLeave = leaveRequests.filter(l => l.status === 'pending').length;
+
+  const taskStatusData = [
+    { name: 'Completed', value: completedTasks, color: '#10b981' },
+    { name: 'In Progress', value: tasks.filter(t => t.status === 'in_progress').length, color: '#3b82f6' },
+    { name: 'Planned', value: plannedTasks, color: '#f59e0b' },
+    { name: 'Blocked', value: blockedTasks, color: '#ef4444' },
+    { name: 'Overdue', value: overdueTasks, color: '#dc2626' },
+  ].filter(d => d.value > 0);
+
+  const projectProgress = projects.map(p => ({
+    name: p.title.length > 12 ? p.title.slice(0, 12) + '...' : p.title,
+    estimated: p.estimatedHours,
+    actual: p.actualHours,
+  }));
+
+  const upcomingMilestones = projects.flatMap(p => p.milestones.filter(m => m.status !== 'completed')).slice(0, 5);
 
   const statCards = [
-    { label: 'Present Today', value: m.presentToday, total: m.totalEmployees, icon: Users, color: 'bg-green-500', change: '+2', trend: 'up' },
-    { label: 'Active Projects', value: m.activeProjects, icon: FolderKanban, color: 'bg-blue-500', change: '+1', trend: 'up' },
-    { label: 'Completed Tasks', value: m.completedTasks, icon: CheckSquare, color: 'bg-emerald-500', change: '+5', trend: 'up' },
-    { label: 'Overdue Tasks', value: m.overdueTasks, icon: AlertTriangle, color: 'bg-red-500', change: '+1', trend: 'down' },
-    { label: 'Absent Today', value: m.absentToday, icon: Clock, color: 'bg-amber-500' },
-    { label: 'Pending Leave', value: m.pendingLeaveRequests, icon: FileWarning, color: 'bg-purple-500' },
+    { label: 'Present Today', value: presentToday, total: allEmployees.filter(e => e.status === 'active').length, icon: Users, color: 'bg-green-500', change: '+2', trend: 'up' as const },
+    { label: 'Active Projects', value: activeProjects, icon: FolderKanban, color: 'bg-blue-500' },
+    { label: 'Completed Tasks', value: completedTasks, icon: CheckSquare, color: 'bg-emerald-500', change: '+5', trend: 'up' as const },
+    { label: 'Overdue Tasks', value: overdueTasks, icon: AlertTriangle, color: 'bg-red-500', change: overdueTasks > 0 ? `+${overdueTasks}` : '0', trend: overdueTasks > 0 ? 'down' as const : 'up' as const },
+    { label: 'Absent Today', value: absentToday, icon: Clock, color: 'bg-amber-500' },
+    { label: 'Pending Leave', value: pendingLeave, icon: FileWarning, color: 'bg-purple-500' },
   ];
 
   return (
@@ -90,7 +110,6 @@ export default function AdminDashboard() {
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Task Completion Trend */}
         <div className="card p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <BarChart3 className="w-4 h-4" /> Weekly Task Completion
@@ -107,7 +126,6 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Task Status Distribution */}
         <div className="card p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Task Status Distribution</h3>
           <div className="flex items-center gap-6">
@@ -134,7 +152,6 @@ export default function AdminDashboard() {
 
       {/* Project Progress & Upcoming */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Project Hours */}
         <div className="card p-6 lg:col-span-2">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Estimated vs Actual Hours by Project</h3>
           <ResponsiveContainer width="100%" height={240}>
@@ -149,17 +166,18 @@ export default function AdminDashboard() {
           </ResponsiveContainer>
         </div>
 
-        {/* Upcoming Milestones */}
         <div className="card p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4 flex items-center gap-2">
             <Calendar className="w-4 h-4" /> Upcoming Milestones
           </h3>
           <div className="space-y-3">
-            {m.upcomingMilestones.map(ms => (
+            {upcomingMilestones.length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No upcoming milestones</p>
+            ) : upcomingMilestones.map(ms => (
               <div key={ms.id} className="p-3 bg-gray-50 rounded-lg">
                 <p className="text-sm font-medium text-gray-900">{ms.title}</p>
                 <p className="text-xs text-gray-500 mt-1">Due: {ms.dueDate}</p>
-                <span className={`badge mt-1 ${ms.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : ms.status === 'completed' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>
+                <span className={`badge mt-1 ${ms.status === 'in_progress' ? 'bg-blue-100 text-blue-700' : ms.status === 'overdue' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
                   {ms.status.replace('_', ' ')}
                 </span>
               </div>
@@ -170,9 +188,8 @@ export default function AdminDashboard() {
 
       {/* Activity Lists */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Delayed Projects */}
         <div className="card p-6">
-          <h3 className="text-sm font-semibold text-gray-900 mb-4">Projects Requiring Attention</h3>
+          <h3 className="text-sm font-semibold text-gray-900 mb-4">Active Projects</h3>
           <div className="space-y-3">
             {projects.filter(p => p.status === 'active').map(p => (
               <Link key={p.id} to={`/projects/${p.id}`} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg hover:bg-gray-100 transition-colors">
@@ -193,12 +210,13 @@ export default function AdminDashboard() {
           </div>
         </div>
 
-        {/* Pending Leave Requests */}
         <div className="card p-6">
           <h3 className="text-sm font-semibold text-gray-900 mb-4">Pending Leave Requests</h3>
           <div className="space-y-3">
-            {leaveRequests.filter(l => l.status === 'pending').map(l => {
-              const emp = employees.find(e => e.id === l.employeeId);
+            {leaveRequests.filter(l => l.status === 'pending').length === 0 ? (
+              <p className="text-sm text-gray-500 text-center py-4">No pending requests</p>
+            ) : leaveRequests.filter(l => l.status === 'pending').map(l => {
+              const emp = allEmployees.find(e => e.id === l.employeeId);
               return (
                 <div key={l.id} className="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                   <div className="flex items-center gap-3">
@@ -217,9 +235,6 @@ export default function AdminDashboard() {
                 </div>
               );
             })}
-            {leaveRequests.filter(l => l.status === 'pending').length === 0 && (
-              <p className="text-sm text-gray-500 text-center py-4">No pending requests</p>
-            )}
           </div>
         </div>
       </div>
@@ -227,44 +242,48 @@ export default function AdminDashboard() {
       {/* Attendance Overview */}
       <div className="card p-6">
         <h3 className="text-sm font-semibold text-gray-900 mb-4">Today's Attendance Overview</h3>
-        <div className="overflow-x-auto">
-          <table className="w-full text-sm">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-2 px-3 font-medium text-gray-500">Employee</th>
-                <th className="text-left py-2 px-3 font-medium text-gray-500">Check In</th>
-                <th className="text-left py-2 px-3 font-medium text-gray-500">Check Out</th>
-                <th className="text-left py-2 px-3 font-medium text-gray-500">Status</th>
-                <th className="text-left py-2 px-3 font-medium text-gray-500">Source</th>
-              </tr>
-            </thead>
-            <tbody>
-              {attendanceRecords.filter(a => a.workDate === new Date().toISOString().split('T')[0]).map(a => {
-                const emp = employees.find(e => e.id === a.employeeId);
-                return (
-                  <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
-                    <td className="py-2 px-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
-                          {emp?.firstName?.[0]}{emp?.lastName?.[0]}
+        {todayAttendance.length === 0 ? (
+          <p className="text-sm text-gray-500 text-center py-4">No attendance records for today</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-200">
+                  <th className="text-left py-2 px-3 font-medium text-gray-500">Employee</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-500">Check In</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-500">Check Out</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-500">Status</th>
+                  <th className="text-left py-2 px-3 font-medium text-gray-500">Source</th>
+                </tr>
+              </thead>
+              <tbody>
+                {todayAttendance.map(a => {
+                  const emp = allEmployees.find(e => e.id === a.employeeId);
+                  return (
+                    <tr key={a.id} className="border-b border-gray-50 hover:bg-gray-50">
+                      <td className="py-2 px-3">
+                        <div className="flex items-center gap-2">
+                          <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
+                            {emp?.firstName?.[0]}{emp?.lastName?.[0]}
+                          </div>
+                          <span className="font-medium">{emp?.firstName} {emp?.lastName}</span>
                         </div>
-                        <span className="font-medium">{emp?.firstName} {emp?.lastName}</span>
-                      </div>
-                    </td>
-                    <td className="py-2 px-3 text-gray-600">{a.checkInAt ? new Date(a.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                    <td className="py-2 px-3 text-gray-600">{a.checkOutAt ? new Date(a.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
-                    <td className="py-2 px-3">
-                      <span className={`badge ${a.status === 'present' ? 'bg-green-100 text-green-700' : a.status === 'late' ? 'bg-amber-100 text-amber-700' : a.status === 'absent' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
-                        {a.status}
-                      </span>
-                    </td>
-                    <td className="py-2 px-3 text-gray-500 text-xs">{a.source.replace('_', ' ')}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
-          </table>
-        </div>
+                      </td>
+                      <td className="py-2 px-3 text-gray-600">{a.checkInAt ? new Date(a.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                      <td className="py-2 px-3 text-gray-600">{a.checkOutAt ? new Date(a.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '—'}</td>
+                      <td className="py-2 px-3">
+                        <span className={`badge ${a.status === 'present' ? 'bg-green-100 text-green-700' : a.status === 'late' ? 'bg-amber-100 text-amber-700' : a.status === 'absent' ? 'bg-red-100 text-red-700' : 'bg-gray-100 text-gray-600'}`}>
+                          {a.status}
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-gray-500 text-xs">{a.source.replace(/_/g, ' ')}</td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );
