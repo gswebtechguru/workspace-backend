@@ -13,6 +13,7 @@ export default function Employees() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
   const [confirmAction, setConfirmAction] = useState<{ empId: string; action: 'activate' | 'deactivate' } | null>(null);
+  const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
   const [newEmp, setNewEmp] = useState({
     firstName: '', lastName: '', username: '', password: '', email: '', phone: '',
     dateOfBirth: '', joiningDate: '', department: 'Engineering', designation: '',
@@ -27,10 +28,19 @@ export default function Employees() {
   });
 
   const handleCreate = () => {
-    if (!newEmp.firstName || !newEmp.lastName || !newEmp.username || !newEmp.password || !newEmp.joiningDate) {
-      alert('Please fill all required fields: First Name, Last Name, Username, Password, and Joining Date');
+    // Validate required fields
+    const errors: Record<string, boolean> = {};
+    if (!newEmp.firstName.trim()) errors.firstName = true;
+    if (!newEmp.lastName.trim()) errors.lastName = true;
+    if (!newEmp.username.trim()) errors.username = true;
+    if (!newEmp.password.trim()) errors.password = true;
+    if (!newEmp.joiningDate) errors.joiningDate = true;
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
+
     const emp: Employee = {
       id: `e_${Date.now()}`,
       userId: `u_${Date.now()}`,
@@ -326,22 +336,67 @@ export default function Employees() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">First Name *</label>
-                  <input className="input-field" value={newEmp.firstName} onChange={e => setNewEmp({...newEmp, firstName: e.target.value})} placeholder="John" />
+                  <input 
+                    className={`input-field ${formErrors.firstName ? 'border-red-500 focus:ring-red-500' : ''}`} 
+                    value={newEmp.firstName} 
+                    onChange={e => {
+                      setNewEmp({...newEmp, firstName: e.target.value});
+                      if (formErrors.firstName) setFormErrors({...formErrors, firstName: false});
+                    }}
+                    placeholder="John" 
+                  />
+                  {formErrors.firstName && (
+                    <p className="text-xs text-red-600 mt-1">First name is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Last Name *</label>
-                  <input className="input-field" value={newEmp.lastName} onChange={e => setNewEmp({...newEmp, lastName: e.target.value})} placeholder="Doe" />
+                  <input 
+                    className={`input-field ${formErrors.lastName ? 'border-red-500 focus:ring-red-500' : ''}`} 
+                    value={newEmp.lastName} 
+                    onChange={e => {
+                      setNewEmp({...newEmp, lastName: e.target.value});
+                      if (formErrors.lastName) setFormErrors({...formErrors, lastName: false});
+                    }}
+                    placeholder="Doe" 
+                  />
+                  {formErrors.lastName && (
+                    <p className="text-xs text-red-600 mt-1">Last name is required</p>
+                  )}
                 </div>
               </div>
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Username *</label>
-                  <input className="input-field" value={newEmp.username} onChange={e => setNewEmp({...newEmp, username: e.target.value})} placeholder="john.doe" />
+                  <input 
+                    className={`input-field ${formErrors.username ? 'border-red-500 focus:ring-red-500' : ''}`} 
+                    value={newEmp.username} 
+                    onChange={e => {
+                      setNewEmp({...newEmp, username: e.target.value});
+                      if (formErrors.username) setFormErrors({...formErrors, username: false});
+                    }}
+                    placeholder="john.doe" 
+                  />
+                  {formErrors.username && (
+                    <p className="text-xs text-red-600 mt-1">Username is required</p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">Used for login</p>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Password *</label>
-                  <input type="password" className="input-field" value={newEmp.password} onChange={e => setNewEmp({...newEmp, password: e.target.value})} placeholder="Enter password" />
+                  <input 
+                    type="password" 
+                    className={`input-field ${formErrors.password ? 'border-red-500 focus:ring-red-500' : ''}`} 
+                    value={newEmp.password} 
+                    onChange={e => {
+                      setNewEmp({...newEmp, password: e.target.value});
+                      if (formErrors.password) setFormErrors({...formErrors, password: false});
+                    }}
+                    placeholder="Enter password" 
+                  />
+                  {formErrors.password && (
+                    <p className="text-xs text-red-600 mt-1">Password is required</p>
+                  )}
                   <p className="text-xs text-gray-500 mt-1">Initial password for login</p>
                 </div>
               </div>
@@ -372,7 +427,18 @@ export default function Employees() {
               <div className="grid grid-cols-2 gap-4">
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Joining Date *</label>
-                  <input type="date" className="input-field" value={newEmp.joiningDate} onChange={e => setNewEmp({...newEmp, joiningDate: e.target.value})} />
+                  <input 
+                    type="date" 
+                    className={`input-field ${formErrors.joiningDate ? 'border-red-500 focus:ring-red-500' : ''}`} 
+                    value={newEmp.joiningDate} 
+                    onChange={e => {
+                      setNewEmp({...newEmp, joiningDate: e.target.value});
+                      if (formErrors.joiningDate) setFormErrors({...formErrors, joiningDate: false});
+                    }} 
+                  />
+                  {formErrors.joiningDate && (
+                    <p className="text-xs text-red-600 mt-1">Joining date is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Department</label>

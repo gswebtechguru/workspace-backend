@@ -12,6 +12,7 @@ export default function CreateProject() {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [isDragging, setIsDragging] = useState(false);
   const [attachments, setAttachments] = useState<ProjectAttachment[]>([]);
+  const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
 
   const [newProject, setNewProject] = useState({
     title: '',
@@ -69,8 +70,13 @@ export default function CreateProject() {
   };
 
   const handleCreateProject = () => {
-    if (!newProject.title || !newProject.startDate) {
-      alert('Please fill all required fields: Title and Start Date');
+    // Validate required fields
+    const errors: Record<string, boolean> = {};
+    if (!newProject.title.trim()) errors.title = true;
+    if (!newProject.startDate) errors.startDate = true;
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
     if (!employee) return;
@@ -148,11 +154,17 @@ export default function CreateProject() {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
           <input
-            className="input-field"
+            className={`input-field ${formErrors.title ? 'border-red-500 focus:ring-red-500' : ''}`}
             value={newProject.title}
-            onChange={e => setNewProject({...newProject, title: e.target.value})}
+            onChange={e => {
+              setNewProject({...newProject, title: e.target.value});
+              if (formErrors.title) setFormErrors({...formErrors, title: false});
+            }}
             placeholder="Enter project title"
           />
+          {formErrors.title && (
+            <p className="text-xs text-red-600 mt-1">Project title is required</p>
+          )}
         </div>
 
         <div>
@@ -171,10 +183,16 @@ export default function CreateProject() {
             <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
             <input
               type="date"
-              className="input-field"
+              className={`input-field ${formErrors.startDate ? 'border-red-500 focus:ring-red-500' : ''}`}
               value={newProject.startDate}
-              onChange={e => setNewProject({...newProject, startDate: e.target.value})}
+              onChange={e => {
+                setNewProject({...newProject, startDate: e.target.value});
+                if (formErrors.startDate) setFormErrors({...formErrors, startDate: false});
+              }}
             />
+            {formErrors.startDate && (
+              <p className="text-xs text-red-600 mt-1">Start date is required</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1">Delivery Date (Optional)</label>

@@ -37,6 +37,7 @@ export default function ProjectDetail() {
   const [showStatusConfirm, setShowStatusConfirm] = useState<{taskId: string, newStatus: Task['status']} | null>(null);
   const [showRemoveMemberConfirm, setShowRemoveMemberConfirm] = useState<string | null>(null);
   const [editProject, setEditProject] = useState<Project | null>(null);
+  const [taskFormErrors, setTaskFormErrors] = useState<Record<string, boolean>>({});
   const [newTask, setNewTask] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
     dueDate: '', estimatedHours: 4, assigneeIds: [] as string[]
@@ -245,11 +246,18 @@ export default function ProjectDetail() {
   };
 
   const handleCreateTask = () => {
-    if (!newTask.title || !employee) return;
-    if (newTask.assigneeIds.length === 0) {
-      alert('Please assign at least one team member');
+    if (!employee) return;
+    
+    // Validate required fields
+    const errors: Record<string, boolean> = {};
+    if (!newTask.title.trim()) errors.title = true;
+    if (newTask.assigneeIds.length === 0) errors.assigneeIds = true;
+
+    if (Object.keys(errors).length > 0) {
+      setTaskFormErrors(errors);
       return;
     }
+
     const today = new Date().toISOString().split('T')[0];
     const task: Task = {
       id: `t_${Date.now()}`,
@@ -771,7 +779,18 @@ export default function ProjectDetail() {
             <div className="p-6 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Task Title *</label>
-                <input className="input-field" value={newTask.title} onChange={e => setNewTask({...newTask, title: e.target.value})} placeholder="Enter task title" />
+                <input 
+                  className={`input-field ${taskFormErrors.title ? 'border-red-500 focus:ring-red-500' : ''}`} 
+                  value={newTask.title} 
+                  onChange={e => {
+                    setNewTask({...newTask, title: e.target.value});
+                    if (taskFormErrors.title) setTaskFormErrors({...taskFormErrors, title: false});
+                  }}
+                  placeholder="Enter task title" 
+                />
+                {taskFormErrors.title && (
+                  <p className="text-xs text-red-600 mt-1">Task title is required</p>
+                )}
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
@@ -798,7 +817,7 @@ export default function ProjectDetail() {
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Assign To *</label>
-                <div className="border border-gray-200 rounded-lg max-h-40 overflow-y-auto p-2 space-y-1">
+                <div className={`border rounded-lg max-h-40 overflow-y-auto p-2 space-y-1 ${taskFormErrors.assigneeIds ? 'border-red-500' : 'border-gray-200'}`}>
                   {/* Include current user if they're a team member */}
                   {project.members.filter(m => m.role !== 'manager' || isAdmin).map(m => {
                     const emp = allEmployees.find(e => e.id === m.employeeId);
@@ -807,12 +826,15 @@ export default function ProjectDetail() {
                         <input
                           type="checkbox"
                           checked={newTask.assigneeIds.includes(m.employeeId)}
-                          onChange={() => setNewTask(prev => ({
-                            ...prev,
-                            assigneeIds: prev.assigneeIds.includes(m.employeeId)
-                              ? prev.assigneeIds.filter(id => id !== m.employeeId)
-                              : [...prev.assigneeIds, m.employeeId]
-                          }))}
+                          onChange={() => {
+                            setNewTask(prev => ({
+                              ...prev,
+                              assigneeIds: prev.assigneeIds.includes(m.employeeId)
+                                ? prev.assigneeIds.filter(id => id !== m.employeeId)
+                                : [...prev.assigneeIds, m.employeeId]
+                            }));
+                            if (taskFormErrors.assigneeIds) setTaskFormErrors({...taskFormErrors, assigneeIds: false});
+                          }}
                           className="rounded text-indigo-600"
                         />
                         <span className="text-sm">{emp?.firstName} {emp?.lastName}</span>
@@ -820,6 +842,9 @@ export default function ProjectDetail() {
                     );
                   })}
                 </div>
+                {taskFormErrors.assigneeIds && (
+                  <p className="text-xs text-red-600 mt-1">Please assign at least one team member</p>
+                )}
               </div>
               <div className="flex gap-3 pt-2">
                 <button onClick={handleCreateTask} className="btn-primary flex-1">Create Task</button>

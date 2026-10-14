@@ -25,7 +25,9 @@ export default function LeaveManagement() {
   const { leaveRequests, leaveTypes, employees: allEmployees, addLeaveRequest, updateLeaveRequest, addNotification } = useData();
   
   const [showApplyModal, setShowApplyModal] = useState(false);
+  const [showConfirmModal, setShowConfirmModal] = useState<{action: 'approve' | 'reject', leaveId: string} | null>(null);
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'approved' | 'rejected'>('all');
+  const [formErrors, setFormErrors] = useState<Record<string, boolean>>({});
   const [newLeave, setNewLeave] = useState({
     leaveTypeId: 'lt1',
     startDate: '',
@@ -36,14 +38,30 @@ export default function LeaveManagement() {
 
   if (!employee) return null;
 
-  // Filter leave requests based on role
-  const filteredRequests = isAdmin 
-    ? leaveRequests.filter(r => filterStatus === 'all' || r.status === filterStatus)
-    : leaveRequests.filter(r => r.employeeId === employee.id && (filterStatus === 'all' || r.status === filterStatus));
+  // Get user-specific leave requests
+  const userLeaveRequests = isAdmin 
+    ? leaveRequests 
+    : leaveRequests.filter(r => r.employeeId === employee.id);
+
+  // Filter leave requests based on role and status
+  const filteredRequests = userLeaveRequests.filter(r => 
+    filterStatus === 'all' || r.status === filterStatus
+  );
+
+  // Calculate counters based on role
+  const pendingCount = userLeaveRequests.filter(r => r.status === 'pending').length;
+  const approvedCount = userLeaveRequests.filter(r => r.status === 'approved').length;
+  const rejectedCount = userLeaveRequests.filter(r => r.status === 'rejected').length;
 
   const handleApplyLeave = () => {
-    if (!newLeave.startDate || !newLeave.endDate || !newLeave.reason) {
-      alert('Please fill all required fields');
+    // Validate required fields
+    const errors: Record<string, boolean> = {};
+    if (!newLeave.startDate) errors.startDate = true;
+    if (!newLeave.endDate) errors.endDate = true;
+    if (!newLeave.reason.trim()) errors.reason = true;
+
+    if (Object.keys(errors).length > 0) {
+      setFormErrors(errors);
       return;
     }
 
@@ -77,6 +95,7 @@ export default function LeaveManagement() {
     });
 
     setShowApplyModal(false);
+    setFormErrors({});
     setNewLeave({
       leaveTypeId: 'lt1',
       startDate: '',
@@ -150,10 +169,6 @@ export default function LeaveManagement() {
     return emp ? `${emp.firstName} ${emp.lastName}` : 'Unknown';
   };
 
-  const pendingCount = leaveRequests.filter(r => r.status === 'pending').length;
-  const approvedCount = leaveRequests.filter(r => r.status === 'approved').length;
-  const rejectedCount = leaveRequests.filter(r => r.status === 'rejected').length;
-
   return (
     <div className="space-y-6">
       {/* Header */}
@@ -216,7 +231,7 @@ export default function LeaveManagement() {
             filterStatus === 'all' ? 'bg-indigo-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          All ({filteredRequests.length})
+          All ({userLeaveRequests.length})
         </button>
         <button
           onClick={() => setFilterStatus('pending')}
@@ -224,7 +239,7 @@ export default function LeaveManagement() {
             filterStatus === 'pending' ? 'bg-amber-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Pending ({leaveRequests.filter(r => r.status === 'pending').length})
+          Pending ({pendingCount})
         </button>
         <button
           onClick={() => setFilterStatus('approved')}
@@ -232,7 +247,7 @@ export default function LeaveManagement() {
             filterStatus === 'approved' ? 'bg-green-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Approved ({leaveRequests.filter(r => r.status === 'approved').length})
+          Approved ({approvedCount})
         </button>
         <button
           onClick={() => setFilterStatus('rejected')}
@@ -240,7 +255,7 @@ export default function LeaveManagement() {
             filterStatus === 'rejected' ? 'bg-red-600 text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
           }`}
         >
-          Rejected ({leaveRequests.filter(r => r.status === 'rejected').length})
+          Rejected ({rejectedCount})
         </button>
       </div>
 
@@ -303,13 +318,13 @@ export default function LeaveManagement() {
                     {isAdmin && leave.status === 'pending' && (
                       <div className="flex gap-2">
                         <button
-                          onClick={() => handleApprove(leave.id)}
+                          onClick={() => setShowConfirmModal({ action: 'approve', leaveId: leave.id })}
                           className="px-4 py-2 bg-green-600 text-white rounded-lg text-sm font-medium hover:bg-green-700 transition-colors flex items-center gap-1"
                         >
                           <CheckCircle2 className="w-4 h-4" /> Approve
                         </button>
                         <button
-                          onClick={() => handleReject(leave.id)}
+                          onClick={() => setShowConfirmModal({ action: 'reject', leaveId: leave.id })}
                           className="px-4 py-2 bg-red-600 text-white rounded-lg text-sm font-medium hover:bg-red-700 transition-colors flex items-center gap-1"
                         >
                           <XCircle className="w-4 h-4" /> Reject
@@ -350,21 +365,33 @@ export default function LeaveManagement() {
                   <label className="block text-sm font-medium text-gray-700 mb-1">Start Date *</label>
                   <input
                     type="date"
-                    className="input-field"
+                    className={`input-field ${formErrors.startDate ? 'border-red-500 focus:ring-red-500' : ''}`}
                     value={newLeave.startDate}
-                    onChange={e => setNewLeave({...newLeave, startDate: e.target.value})}
+                    onChange={e => {
+                      setNewLeave({...newLeave, startDate: e.target.value});
+                      if (formErrors.startDate) setFormErrors({...formErrors, startDate: false});
+                    }}
                     min={new Date().toISOString().split('T')[0]}
                   />
+                  {formErrors.startDate && (
+                    <p className="text-xs text-red-600 mt-1">Start date is required</p>
+                  )}
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">End Date *</label>
                   <input
                     type="date"
-                    className="input-field"
+                    className={`input-field ${formErrors.endDate ? 'border-red-500 focus:ring-red-500' : ''}`}
                     value={newLeave.endDate}
-                    onChange={e => setNewLeave({...newLeave, endDate: e.target.value})}
+                    onChange={e => {
+                      setNewLeave({...newLeave, endDate: e.target.value});
+                      if (formErrors.endDate) setFormErrors({...formErrors, endDate: false});
+                    }}
                     min={newLeave.startDate || new Date().toISOString().split('T')[0]}
                   />
+                  {formErrors.endDate && (
+                    <p className="text-xs text-red-600 mt-1">End date is required</p>
+                  )}
                 </div>
               </div>
               <div>
@@ -391,18 +418,83 @@ export default function LeaveManagement() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Reason *</label>
                 <textarea
-                  className="input-field"
+                  className={`input-field ${formErrors.reason ? 'border-red-500 focus:ring-red-500' : ''}`}
                   rows={3}
                   value={newLeave.reason}
-                  onChange={e => setNewLeave({...newLeave, reason: e.target.value})}
+                  onChange={e => {
+                    setNewLeave({...newLeave, reason: e.target.value});
+                    if (formErrors.reason) setFormErrors({...formErrors, reason: false});
+                  }}
                   placeholder="Please provide a reason for your leave..."
                 />
+                {formErrors.reason && (
+                  <p className="text-xs text-red-600 mt-1">Reason is required</p>
+                )}
               </div>
               <div className="flex gap-3 pt-4">
                 <button onClick={handleApplyLeave} className="btn-primary flex-1">
                   Submit Request
                 </button>
-                <button onClick={() => setShowApplyModal(false)} className="btn-secondary flex-1">
+                <button onClick={() => {
+                  setShowApplyModal(false);
+                  setFormErrors({});
+                }} className="btn-secondary flex-1">
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {showConfirmModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowConfirmModal(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${
+                  showConfirmModal.action === 'approve' ? 'bg-green-100' : 'bg-red-100'
+                }`}>
+                  {showConfirmModal.action === 'approve' ? (
+                    <CheckCircle2 className="w-6 h-6 text-green-600" />
+                  ) : (
+                    <XCircle className="w-6 h-6 text-red-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {showConfirmModal.action === 'approve' ? 'Approve Leave Request' : 'Reject Leave Request'}
+                  </h3>
+                  <p className="text-sm text-gray-500 mt-1">
+                    {showConfirmModal.action === 'approve' 
+                      ? 'Are you sure you want to approve this leave request?'
+                      : 'Are you sure you want to reject this leave request?'}
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    if (showConfirmModal.action === 'approve') {
+                      handleApprove(showConfirmModal.leaveId);
+                    } else {
+                      handleReject(showConfirmModal.leaveId);
+                    }
+                    setShowConfirmModal(null);
+                  }}
+                  className={`flex-1 px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+                    showConfirmModal.action === 'approve'
+                      ? 'bg-green-600 text-white hover:bg-green-700'
+                      : 'bg-red-600 text-white hover:bg-red-700'
+                  }`}
+                >
+                  {showConfirmModal.action === 'approve' ? 'Approve' : 'Reject'}
+                </button>
+                <button
+                  onClick={() => setShowConfirmModal(null)}
+                  className="btn-secondary flex-1"
+                >
                   Cancel
                 </button>
               </div>
