@@ -34,6 +34,8 @@ export default function ProjectDetail() {
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showTeamModal, setShowTeamModal] = useState(false);
   const [showTaskModal, setShowTaskModal] = useState(false);
+  const [showStatusConfirm, setShowStatusConfirm] = useState<{taskId: string, newStatus: Task['status']} | null>(null);
+  const [showRemoveMemberConfirm, setShowRemoveMemberConfirm] = useState<string | null>(null);
   const [editProject, setEditProject] = useState<Project | null>(null);
   const [newTask, setNewTask] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
@@ -76,18 +78,27 @@ export default function ProjectDetail() {
   };
 
   const handleDownloadAttachment = (attachment: ProjectAttachment) => {
-    // In a real app, this would download from a URL
-    // For demo, we'll create a blob with the file info
-    const content = `File: ${attachment.fileName}\nSize: ${formatFileSize(attachment.fileSize)}\nType: ${attachment.mimeType}\nUploaded: ${attachment.uploadedAt}`;
-    const blob = new Blob([content], { type: 'text/plain' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = attachment.fileName;
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    // If we have base64 data, use it
+    if (attachment.url && attachment.url.startsWith('data:')) {
+      const a = document.createElement('a');
+      a.href = attachment.url;
+      a.download = attachment.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+    } else {
+      // Fallback: create a text file with file info
+      const content = `File: ${attachment.fileName}\nSize: ${formatFileSize(attachment.fileSize)}\nType: ${attachment.mimeType}\nUploaded: ${attachment.uploadedAt}`;
+      const blob = new Blob([content], { type: 'text/plain' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = attachment.fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    }
   };
 
   const handleEditProject = () => {
@@ -103,28 +114,34 @@ export default function ProjectDetail() {
   };
 
   const handleTaskStatusChange = (taskId: string, newStatus: Task['status']) => {
-    const task = tasks.find(t => t.id === taskId);
-    if (!task || !employee) return;
+    setShowStatusConfirm({ taskId, newStatus });
+  };
+
+  const confirmStatusChange = () => {
+    if (!showStatusConfirm || !employee) return;
+
+    const task = tasks.find(t => t.id === showStatusConfirm.taskId);
+    if (!task) return;
 
     const now = new Date().toISOString();
     const newHistory = [...task.statusHistory, {
       id: `sh_${Date.now()}`,
       fromStatus: task.status,
-      toStatus: newStatus,
+      toStatus: showStatusConfirm.newStatus,
       changedBy: employee.id,
       changedAt: now,
     }];
 
     const updates: Partial<Task> = {
-      status: newStatus,
+      status: showStatusConfirm.newStatus,
       statusHistory: newHistory,
     };
 
-    if (newStatus === 'completed') {
+    if (showStatusConfirm.newStatus === 'completed') {
       updates.completedAt = now;
     }
 
-    updateTask(taskId, updates);
+    updateTask(showStatusConfirm.taskId, updates);
     notificationSound.playStatusSound();
 
     // Notify all project members
@@ -137,7 +154,7 @@ export default function ProjectDetail() {
             userId: emp.userId,
             type: 'task_completed',
             title: 'Task Status Updated',
-            message: `"${task.title}" is now ${newStatus.replace('_', ' ')} in ${project.title}`,
+            message: `"${task.title}" is now ${showStatusConfirm.newStatus.replace('_', ' ')} in ${project.title}`,
             entityId: task.id,
             entityType: 'task',
             isRead: false,
@@ -146,6 +163,8 @@ export default function ProjectDetail() {
         }
       }
     });
+
+    setShowStatusConfirm(null);
   };
 
   const handleCreateTask = () => {
@@ -250,15 +269,25 @@ export default function ProjectDetail() {
   const handleChatFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = e.target.files;
     if (!files) return;
-    const newAtts: ProjectAttachment[] = Array.from(files).map(f => ({
-      id: `att_${Date.now()}_${Math.random()}`,
-      fileName: f.name,
-      fileSize: f.size,
-      mimeType: f.type || 'application/octet-stream',
-      uploadedAt: new Date().toISOString(),
-      uploadedBy: employee?.id || 'e1',
-    }));
-    setChatAttachments(prev => [...prev, ...newAtts]);
+    
+    Array.from(files).forEach(file => {
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const base64 = event.target?.result as string;
+        const newAtt: ProjectAttachment = {
+          id: `att_${Date.now()}_${Math.random()}`,
+          fileName: file.name,
+          fileSize: file.size,
+          mimeType: file.type || 'application/octet-stream',
+          url: base64,
+          uploadedAt: new Date().toISOString(),
+          uploadedBy: employee?.id || 'e1',
+        };
+        setChatAttachments(prev => [...prev, newAtt]);
+      };
+      reader.readAsDataURL(file);
+    });
+    
     if (chatFileInputRef.current) chatFileInputRef.current.value = '';
   };
 
@@ -375,33 +404,44 @@ export default function ProjectDetail() {
             <p className="text-gray-500 text-center py-8">No tasks yet. Click "Add Task" to create one.</p>
           ) : (
             <div className="space-y-3">
-              {projectTasks.map(task => (
-                <div key={task.id} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
-                  <div className="flex items-start justify-between mb-2">
-                    <div className="flex-1">
-                      <h4 className="font-semibold text-gray-900">{task.title}</h4>
-                      {task.description && <p className="text-sm text-gray-600 mt-1">{task.description}</p>}
+              {projectTasks.map(task => {
+                const lastStatusChange = task.statusHistory[task.statusHistory.length - 1];
+                const changedByEmployee = lastStatusChange ? allEmployees.find(e => e.id === lastStatusChange.changedBy) : null;
+                
+                return (
+                  <div key={task.id} className="p-4 bg-white border border-gray-200 rounded-lg hover:shadow-md transition-shadow">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-gray-900">{task.title}</h4>
+                        {task.description && <p className="text-sm text-gray-600 mt-1">{task.description}</p>}
+                      </div>
+                      <select
+                        value={task.status}
+                        onChange={(e) => handleTaskStatusChange(task.id, e.target.value as Task['status'])}
+                        className={`text-xs px-3 py-1 rounded-full font-medium ${statusColors[task.status]}`}
+                      >
+                        <option value="planned">Planned</option>
+                        <option value="in_progress">In Progress</option>
+                        <option value="completed">Completed</option>
+                        <option value="on_hold">On Hold</option>
+                      </select>
                     </div>
-                    <select
-                      value={task.status}
-                      onChange={(e) => handleTaskStatusChange(task.id, e.target.value as Task['status'])}
-                      className={`text-xs px-3 py-1 rounded-full font-medium ${statusColors[task.status]}`}
-                    >
-                      <option value="planned">Planned</option>
-                      <option value="in_progress">In Progress</option>
-                      <option value="completed">Completed</option>
-                      <option value="on_hold">On Hold</option>
-                    </select>
-                  </div>
-                  <div className="flex items-center justify-between text-xs text-gray-500">
-                    <div className="flex items-center gap-4">
-                      <span>Assigned: {task.assigneeIds.map(id => getEmployeeName(id)).join(', ')}</span>
-                      {task.dueDate && <span>Due: {task.dueDate}</span>}
+                    <div className="flex items-center justify-between text-xs text-gray-500 mb-2">
+                      <div className="flex items-center gap-4">
+                        <span>Assigned: {task.assigneeIds.map(id => getEmployeeName(id)).join(', ')}</span>
+                        {task.dueDate && <span>Due: {task.dueDate}</span>}
+                      </div>
+                      <span>{(task.actualMinutes / 60).toFixed(1)}h / {(task.estimatedMinutes / 60).toFixed(1)}h</span>
                     </div>
-                    <span>{(task.actualMinutes / 60).toFixed(1)}h / {(task.estimatedMinutes / 60).toFixed(1)}h</span>
+                    {lastStatusChange && (
+                      <div className="text-xs text-gray-400 border-t border-gray-100 pt-2 mt-2">
+                        <span className="font-medium">Status changed to {lastStatusChange.toStatus.replace('_', ' ')} by {changedByEmployee?.firstName} {changedByEmployee?.lastName}</span>
+                        <span className="ml-2">on {new Date(lastStatusChange.changedAt).toLocaleString()}</span>
+                      </div>
+                    )}
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>
@@ -533,7 +573,7 @@ export default function ProjectDetail() {
                   </div>
                   {isAdmin && !isManager && (
                     <button
-                      onClick={() => removeProjectMember(project.id, m.id)}
+                      onClick={() => setShowRemoveMemberConfirm(m.id)}
                       className="p-2 hover:bg-red-50 rounded-lg text-red-500"
                       title="Remove member"
                     >
@@ -726,6 +766,66 @@ export default function ProjectDetail() {
                 {allEmployees.filter(e => e.status === 'active' && !project.members.some(m => m.employeeId === e.id)).length === 0 && (
                   <p className="text-sm text-gray-500 text-center py-4">All employees are already team members</p>
                 )}
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Task Status Change Confirmation */}
+      {showStatusConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowStatusConfirm(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+                  <CheckCircle2 className="w-6 h-6 text-blue-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Confirm Status Change</h3>
+                  <p className="text-sm text-gray-500">
+                    Are you sure you want to change the task status to <span className="font-medium">{showStatusConfirm.newStatus.replace('_', ' ')}</span>?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button onClick={confirmStatusChange} className="btn-primary flex-1">Confirm</button>
+                <button onClick={() => setShowStatusConfirm(null)} className="btn-secondary flex-1">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Remove Team Member Confirmation */}
+      {showRemoveMemberConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowRemoveMemberConfirm(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+                  <UserMinus className="w-6 h-6 text-red-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold">Remove Team Member</h3>
+                  <p className="text-sm text-gray-500">
+                    Are you sure you want to remove this member from the project?
+                  </p>
+                </div>
+              </div>
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    if (showRemoveMemberConfirm) {
+                      removeProjectMember(project.id, showRemoveMemberConfirm);
+                      setShowRemoveMemberConfirm(null);
+                    }
+                  }}
+                  className="btn-danger flex-1"
+                >
+                  Remove
+                </button>
+                <button onClick={() => setShowRemoveMemberConfirm(null)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>
           </div>
