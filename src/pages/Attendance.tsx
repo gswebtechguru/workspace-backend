@@ -33,7 +33,7 @@ export default function Attendance() {
       leaveTypeId: leaveForm.leaveTypeId,
       startDate: leaveForm.startDate,
       endDate: leaveForm.endDate,
-      isPartialDay: false,
+      duration: 'full_day' as const,
       reason: leaveForm.reason,
       status: 'pending' as const,
       createdAt: new Date().toISOString(),

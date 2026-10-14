@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Task, AttendanceRecord, ProjectMessage, Notification, LeaveRequest, Project, Employee, DailyWorkReport, Announcement, TimeEntry } from '../types';
-import { tasks as initialTasks, attendanceRecords as initialAttendance, projectMessages as initialMessages, notifications as initialNotifications, leaveRequests as initialLeave, projects as initialProjects, employees as initialEmployees, dailyReports as initialReports, announcements as initialAnnouncements } from '../data/mockData';
+import { Task, AttendanceRecord, ProjectMessage, Notification, LeaveRequest, LeaveType, Project, Employee, DailyWorkReport, Announcement, TimeEntry } from '../types';
+import { tasks as initialTasks, attendanceRecords as initialAttendance, projectMessages as initialMessages, notifications as initialNotifications, leaveRequests as initialLeave, leaveTypes as initialLeaveTypes, projects as initialProjects, employees as initialEmployees, dailyReports as initialReports, announcements as initialAnnouncements } from '../data/mockData';
 
 interface DataContextType {
   tasks: Task[];
@@ -8,6 +8,7 @@ interface DataContextType {
   projectMessages: ProjectMessage[];
   notifications: Notification[];
   leaveRequests: LeaveRequest[];
+  leaveTypes: LeaveType[];
   projects: Project[];
   employees: Employee[];
   dailyReports: DailyWorkReport[];
@@ -96,6 +97,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
     return allNotifs;
   });
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeave);
+  const [leaveTypes] = useState<LeaveType[]>(initialLeaveTypes);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [dailyReports, setDailyReports] = useState<DailyWorkReport[]>(initialReports);
@@ -246,7 +248,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
 
   return (
     <DataContext.Provider value={{
-      tasks, attendanceRecords, projectMessages, notifications, leaveRequests, projects, employees, dailyReports, announcements,
+      tasks, attendanceRecords, projectMessages, notifications, leaveRequests, leaveTypes, projects, employees, dailyReports, announcements,
       addTask, updateTask, completeTask, reopenTask, addTimeEntry,
       checkOut, addMessage, deleteMessage, markNotificationRead, addNotification,
       addLeaveRequest, updateLeaveRequest, updateProject, addProject, deleteProject, addProjectMember, removeProjectMember,

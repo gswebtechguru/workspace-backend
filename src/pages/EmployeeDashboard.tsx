@@ -64,12 +64,37 @@ export default function EmployeeDashboard() {
               {todayAttendance?.checkInAt ? `Checked in at ${new Date(todayAttendance.checkInAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : 'Not checked in yet'}
             </p>
             <p className="text-sm text-gray-500">
-              {todayAttendance?.checkOutAt ? `Checked out at ${new Date(todayAttendance.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}` : todayAttendance?.checkInAt ? 'Working • Remember to check out' : 'Login-based attendance • Auto check-in on first login'}
+              {todayAttendance?.checkOutAt ? (
+                <>
+                  Checked out at {new Date(todayAttendance.checkOutAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  {todayAttendance.checkInAt && todayAttendance.checkOutAt && (
+                    <span className="ml-2 font-medium text-green-600">
+                      • Total: {((new Date(todayAttendance.checkOutAt).getTime() - new Date(todayAttendance.checkInAt).getTime()) / 3600000).toFixed(1)} hours
+                    </span>
+                  )}
+                </>
+              ) : todayAttendance?.checkInAt ? (
+                <>
+                  Working • Remember to check out
+                  {todayAttendance.checkInAt && (
+                    <span className="ml-2 font-medium text-blue-600">
+                      • Current: {((new Date().getTime() - new Date(todayAttendance.checkInAt).getTime()) / 3600000).toFixed(1)} hours
+                    </span>
+                  )}
+                </>
+              ) : 'Login-based attendance • Auto check-in on first login'}
             </p>
           </div>
         </div>
         {todayAttendance?.checkInAt && !todayAttendance?.checkOutAt && (
-          <button onClick={handleCheckOut} className="btn-secondary">Check Out</button>
+          <button onClick={handleCheckOut} className="btn-primary flex items-center gap-2">
+            <Clock className="w-4 h-4" /> Check Out
+          </button>
+        )}
+        {todayAttendance?.checkOutAt && (
+          <div className="px-4 py-2 bg-green-50 border border-green-200 rounded-lg">
+            <p className="text-sm font-medium text-green-700">✓ Checked Out</p>
+          </div>
         )}
       </div>
 

@@ -113,9 +113,9 @@ export const leaveTypes: LeaveType[] = [
 ];
 
 export const leaveRequests: LeaveRequest[] = [
-  { id: 'l1', employeeId: 'e2', leaveTypeId: 'lt1', startDate: '2024-03-25', endDate: '2024-03-26', isPartialDay: false, reason: 'Holi festival celebrations', status: 'approved', approverId: 'e1', decisionAt: '2024-03-18T14:00:00', createdAt: '2024-03-17T10:00:00' },
-  { id: 'l2', employeeId: 'e6', leaveTypeId: 'lt2', startDate: '2024-03-20', endDate: '2024-03-20', isPartialDay: false, reason: 'Not feeling well', status: 'pending', createdAt: '2024-03-19T08:00:00' },
-  { id: 'l3', employeeId: 'e4', leaveTypeId: 'lt3', startDate: '2024-04-01', endDate: '2024-04-05', isPartialDay: false, reason: 'Family vacation', status: 'pending', createdAt: '2024-03-18T16:00:00' },
+  { id: 'l1', employeeId: 'e2', leaveTypeId: 'lt1', startDate: '2024-03-25', endDate: '2024-03-26', duration: 'full_day', reason: 'Holi festival celebrations', status: 'approved', approverId: 'e1', decisionAt: '2024-03-18T14:00:00', createdAt: '2024-03-17T10:00:00' },
+  { id: 'l2', employeeId: 'e6', leaveTypeId: 'lt2', startDate: '2024-03-20', endDate: '2024-03-20', duration: 'full_day', reason: 'Not feeling well', status: 'pending', createdAt: '2024-03-19T08:00:00' },
+  { id: 'l3', employeeId: 'e4', leaveTypeId: 'lt3', startDate: '2024-04-01', endDate: '2024-04-05', duration: 'full_day', reason: 'Family vacation', status: 'pending', createdAt: '2024-03-18T16:00:00' },
 ];
 
 export const dailyReports: DailyWorkReport[] = [

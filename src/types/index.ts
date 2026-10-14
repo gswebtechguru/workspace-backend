@@ -244,6 +244,7 @@ export interface AttendanceRecord {
 }
 
 export type LeaveStatus = 'pending' | 'approved' | 'rejected' | 'cancelled';
+export type LeaveDuration = 'full_day' | 'first_half' | 'second_half' | 'morning_short' | 'evening_short';
 
 export interface LeaveRequest {
   id: string;
@@ -251,7 +252,7 @@ export interface LeaveRequest {
   leaveTypeId: string;
   startDate: string;
   endDate: string;
-  isPartialDay: boolean;
+  duration: LeaveDuration;
   reason: string;
   status: LeaveStatus;
   approverId?: string;

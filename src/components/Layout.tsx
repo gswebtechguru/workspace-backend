@@ -12,6 +12,7 @@ const adminNav = [
   { path: '/projects', label: 'Projects', icon: FolderKanban },
   { path: '/tasks', label: 'Tasks', icon: CheckSquare },
   { path: '/attendance', label: 'Attendance', icon: Clock },
+  { path: '/leave', label: 'Leave Management', icon: FileText },
   { path: '/chat', label: 'Chat', icon: MessageSquare },
   { path: '/reports', label: 'Reports', icon: FileText },
   { path: '/announcements', label: 'Announcements', icon: Megaphone },
@@ -23,6 +24,7 @@ const employeeNav = [
   { path: '/my-projects', label: 'My Projects', icon: FolderKanban },
   { path: '/my-tasks', label: 'Daily Planner', icon: CheckSquare },
   { path: '/my-attendance', label: 'Attendance', icon: Clock },
+  { path: '/my-leave', label: 'Leave Requests', icon: FileText },
   { path: '/chat', label: 'Chat', icon: MessageSquare },
   { path: '/my-reports', label: 'Work History', icon: FileText },
 ];

@@ -15,6 +15,7 @@ import Chat from './pages/Chat';
 import Reports from './pages/Reports';
 import EmployeeDashboard from './pages/EmployeeDashboard';
 import SettingsPage, { Announcements } from './pages/Settings';
+import LeaveManagement from './pages/LeaveManagement';
 
 function ProtectedRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth();
@@ -42,6 +43,7 @@ function AppRoutes() {
       <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+      <Route path="/leave" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><SettingsPage /></ProtectedRoute>} />
       <Route path="/announcements" element={<ProtectedRoute><Announcements /></ProtectedRoute>} />
@@ -50,6 +52,7 @@ function AppRoutes() {
       <Route path="/my-projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
       <Route path="/my-tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/my-attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
+      <Route path="/my-leave" element={<ProtectedRoute><LeaveManagement /></ProtectedRoute>} />
       <Route path="/my-reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
       
