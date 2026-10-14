@@ -26,10 +26,11 @@ export default function Projects() {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [newProject, setNewProject] = useState({
     title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
-    startDate: '', targetDeliveryDate: '', projectManagerId: '', technologyStack: '',
+    startDate: '', targetDeliveryDate: '', technologyStack: '',
     memberIds: [] as string[]
   });
   const [attachments, setAttachments] = useState<ProjectAttachment[]>([]);
+  const [isDragging, setIsDragging] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const filtered = projects.filter(p => {
@@ -69,13 +70,18 @@ export default function Projects() {
   };
 
   const handleCreateProject = () => {
-    if (!newProject.title || !newProject.startDate || !newProject.projectManagerId) {
-      alert('Please fill all required fields: Title, Start Date, and Project Manager');
+    if (!newProject.title || !newProject.startDate) {
+      alert('Please fill all required fields: Title and Start Date');
+      return;
+    }
+    if (!employee) {
+      alert('You must be logged in to create a project');
       return;
     }
     const today = new Date().toISOString().split('T')[0];
+    // Current logged-in user becomes the project manager automatically
     const allMembers = [
-      { id: `pm_${Date.now()}_mgr`, employeeId: newProject.projectManagerId, role: 'manager' as const, joinedAt: today },
+      { id: `pm_${Date.now()}_mgr`, employeeId: employee.id, role: 'manager' as const, joinedAt: today },
       ...newProject.memberIds.map((id, i) => ({
         id: `pm_${Date.now()}_${i}`, employeeId: id, role: 'developer' as const, joinedAt: today
       }))
@@ -86,7 +92,7 @@ export default function Projects() {
       title: newProject.title,
       description: newProject.description,
       technologyStack: newProject.technologyStack ? newProject.technologyStack.split(',').map(t => t.trim()) : [],
-      projectManagerId: newProject.projectManagerId,
+      projectManagerId: employee.id,
       members: allMembers,
       startDate: newProject.startDate,
       targetDeliveryDate: newProject.targetDeliveryDate || undefined,
@@ -102,8 +108,39 @@ export default function Projects() {
     };
     addProject(project);
     setShowCreateModal(false);
-    setNewProject({ title: '', description: '', priority: 'medium', startDate: '', targetDeliveryDate: '', projectManagerId: '', technologyStack: '', memberIds: [] });
+    setNewProject({ title: '', description: '', priority: 'medium', startDate: '', targetDeliveryDate: '', technologyStack: '', memberIds: [] });
     setAttachments([]);
+  };
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault();
+    e.stopPropagation();
+    setIsDragging(false);
+
+    const files = e.dataTransfer.files;
+    if (files && files.length > 0) {
+      const newAtts: ProjectAttachment[] = Array.from(files).map(f => ({
+        id: `att_${Date.now()}_${Math.random()}`,
+        fileName: f.name,
+        fileSize: f.size,
+        mimeType: f.type || 'application/octet-stream',
+        uploadedAt: new Date().toISOString(),
+        uploadedBy: employee?.id || 'e1',
+      }));
+      setAttachments(prev => [...prev, ...newAtts]);
+    }
   };
 
   const formatFileSize = (bytes: number) => {
@@ -366,25 +403,19 @@ export default function Projects() {
                   <input type="date" className="input-field" value={newProject.targetDeliveryDate} onChange={e => setNewProject({...newProject, targetDeliveryDate: e.target.value})} />
                 </div>
               </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
-                  <select className="input-field" value={newProject.priority} onChange={e => setNewProject({...newProject, priority: e.target.value as any})}>
-                    <option value="low">Low</option>
-                    <option value="medium">Medium</option>
-                    <option value="high">High</option>
-                    <option value="critical">Critical</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager *</label>
-                  <select className="input-field" value={newProject.projectManagerId} onChange={e => setNewProject({...newProject, projectManagerId: e.target.value})}>
-                    <option value="">Select manager</option>
-                    {allEmployees.filter(e => e.role === 'admin').map(e => (
-                      <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
-                    ))}
-                  </select>
-                </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                <select className="input-field" value={newProject.priority} onChange={e => setNewProject({...newProject, priority: e.target.value as any})}>
+                  <option value="low">Low</option>
+                  <option value="medium">Medium</option>
+                  <option value="high">High</option>
+                  <option value="critical">Critical</option>
+                </select>
+              </div>
+              <div className="p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                <p className="text-xs text-blue-800">
+                  <strong>Note:</strong> You will be automatically assigned as the Project Manager.
+                </p>
               </div>
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-1">Technology Stack</label>
@@ -395,7 +426,7 @@ export default function Projects() {
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Assign Team Members</label>
                 <div className="border border-gray-200 rounded-lg max-h-48 overflow-y-auto p-2 space-y-1">
-                  {allEmployees.filter(e => e.id !== newProject.projectManagerId && e.status === 'active').map(emp => (
+                  {allEmployees.filter(e => e.id !== employee?.id && e.status === 'active').map(emp => (
                     <label key={emp.id} className="flex items-center gap-3 p-2 hover:bg-gray-50 rounded cursor-pointer">
                       <input type="checkbox" checked={newProject.memberIds.includes(emp.id)} onChange={() => toggleMember(emp.id)} className="rounded text-indigo-600" />
                       <div className="w-7 h-7 rounded-full bg-indigo-100 flex items-center justify-center text-xs font-bold text-indigo-700">
@@ -416,10 +447,21 @@ export default function Projects() {
               {/* Upload Project Materials */}
               <div>
                 <label className="block text-sm font-medium text-gray-700 mb-2">Project Materials</label>
-                <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center hover:border-indigo-400 transition-colors">
+                <div
+                  className={`border-2 border-dashed rounded-lg p-4 text-center transition-colors ${
+                    isDragging
+                      ? 'border-indigo-500 bg-indigo-50'
+                      : 'border-gray-300 hover:border-indigo-400'
+                  }`}
+                  onDragOver={handleDragOver}
+                  onDragLeave={handleDragLeave}
+                  onDrop={handleDrop}
+                >
                   <input type="file" ref={fileInputRef} onChange={handleFileUpload} multiple className="hidden" />
-                  <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                  <p className="text-sm text-gray-600">Click to upload files or drag and drop</p>
+                  <Upload className={`w-8 h-8 mx-auto mb-2 ${isDragging ? 'text-indigo-500' : 'text-gray-400'}`} />
+                  <p className="text-sm text-gray-600">
+                    {isDragging ? 'Drop files here...' : 'Click to upload files or drag and drop'}
+                  </p>
                   <p className="text-xs text-gray-400 mt-1">PDF, DOC, XLS, Images, ZIP (max 10MB each)</p>
                   <button type="button" onClick={() => fileInputRef.current?.click()} className="mt-2 text-sm text-indigo-600 hover:text-indigo-800 font-medium">
                     Browse Files
