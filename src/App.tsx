@@ -7,6 +7,8 @@ import Login from './pages/Login';
 import AdminDashboard from './pages/AdminDashboard';
 import Employees from './pages/Employees';
 import Projects from './pages/Projects';
+import ProjectDetail from './pages/ProjectDetail';
+import CreateProject from './pages/CreateProject';
 import Tasks from './pages/Tasks';
 import Attendance from './pages/Attendance';
 import Chat from './pages/Chat';
@@ -36,7 +38,8 @@ function AppRoutes() {
       <Route path="/dashboard" element={<ProtectedRoute><AdminDashboard /></ProtectedRoute>} />
       <Route path="/employees" element={<ProtectedRoute><Employees /></ProtectedRoute>} />
       <Route path="/projects" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
-      <Route path="/projects/:id" element={<ProtectedRoute><Projects /></ProtectedRoute>} />
+      <Route path="/projects/new" element={<ProtectedRoute><CreateProject /></ProtectedRoute>} />
+      <Route path="/projects/:id" element={<ProtectedRoute><ProjectDetail /></ProtectedRoute>} />
       <Route path="/tasks" element={<ProtectedRoute><Tasks /></ProtectedRoute>} />
       <Route path="/attendance" element={<ProtectedRoute><Attendance /></ProtectedRoute>} />
       <Route path="/reports" element={<ProtectedRoute><Reports /></ProtectedRoute>} />
