@@ -31,6 +31,9 @@ interface DataContextType {
   // Projects
   updateProject: (id: string, updates: Partial<Project>) => void;
   addProject: (project: Project) => void;
+  deleteProject: (id: string) => void;
+  addProjectMember: (projectId: string, employeeId: string, role: string) => void;
+  removeProjectMember: (projectId: string, memberId: string) => void;
   // Employees
   addEmployee: (emp: Employee) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
@@ -201,6 +204,37 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setProjects(prev => [project, ...prev]);
   }, []);
 
+  const deleteProject = useCallback((id: string) => {
+    setProjects(prev => prev.filter(p => p.id !== id));
+    // Also delete related tasks and messages
+    setTasks(prev => prev.filter(t => t.projectId !== id));
+    setProjectMessages(prev => prev.filter(m => m.projectId !== id));
+  }, []);
+
+  const addProjectMember = useCallback((projectId: string, employeeId: string, role: string) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        const newMember = {
+          id: `pm_${Date.now()}`,
+          employeeId,
+          role: role as any,
+          joinedAt: new Date().toISOString().split('T')[0]
+        };
+        return { ...p, members: [...p.members, newMember] };
+      }
+      return p;
+    }));
+  }, []);
+
+  const removeProjectMember = useCallback((projectId: string, memberId: string) => {
+    setProjects(prev => prev.map(p => {
+      if (p.id === projectId) {
+        return { ...p, members: p.members.filter(m => m.id !== memberId) };
+      }
+      return p;
+    }));
+  }, []);
+
   const addAnnouncement = useCallback((ann: Announcement) => {
     setAnnouncements(prev => [ann, ...prev]);
   }, []);
@@ -210,7 +244,7 @@ export function DataProvider({ children }: { children: ReactNode }) {
       tasks, attendanceRecords, projectMessages, notifications, leaveRequests, projects, employees, dailyReports, announcements,
       addTask, updateTask, completeTask, reopenTask, addTimeEntry,
       checkOut, addMessage, markNotificationRead, addNotification,
-      addLeaveRequest, updateLeaveRequest, updateProject, addProject,
+      addLeaveRequest, updateLeaveRequest, updateProject, addProject, deleteProject, addProjectMember, removeProjectMember,
       addEmployee, updateEmployee, toggleEmployeeStatus, addAnnouncement,
     }}>
       {children}

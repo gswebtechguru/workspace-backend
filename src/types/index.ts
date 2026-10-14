@@ -109,6 +109,7 @@ export interface ProjectAttachment {
   fileName: string;
   fileSize: number;
   mimeType: string;
+  url?: string;
   uploadedAt: string;
   uploadedBy: string;
 }
@@ -199,7 +200,7 @@ export interface ProjectMessage {
   isPinned: boolean;
   linkedTaskId?: string;
   mentions: string[];
-  attachments: Attachment[];
+  attachments: ProjectAttachment[];
   createdAt: string;
   updatedAt?: string;
   editedAt?: string;
