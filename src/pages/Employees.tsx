@@ -1,0 +1,161 @@
+import React, { useState } from 'react';
+import { employees, departments, teams } from '../data/mockData';
+import { Search, Plus, Filter, Mail, Phone, Calendar, MoreVertical, X, UserCheck, UserX } from 'lucide-react';
+import { Employee } from '../types';
+
+export default function Employees() {
+  const [search, setSearch] = useState('');
+  const [deptFilter, setDeptFilter] = useState('');
+  const [statusFilter, setStatusFilter] = useState('');
+  const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
+  const [showCreateModal, setShowCreateModal] = useState(false);
+
+  const filtered = employees.filter(e => {
+    const matchSearch = !search || `${e.firstName} ${e.lastName} ${e.email} ${e.employeeId}`.toLowerCase().includes(search.toLowerCase());
+    const matchDept = !deptFilter || e.department === deptFilter;
+    const matchStatus = !statusFilter || e.status === statusFilter;
+    return matchSearch && matchDept && matchStatus;
+  });
+
+  return (
+    <div className="space-y-6">
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Employees</h1>
+          <p className="text-sm text-gray-500">{filtered.length} of {employees.length} employees</p>
+        </div>
+        <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Add Employee
+        </button>
+      </div>
+
+      {/* Filters */}
+      <div className="flex flex-wrap gap-3">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+          <input type="text" placeholder="Search by name, email, or ID..." value={search} onChange={e => setSearch(e.target.value)}
+            className="input-field pl-10" />
+        </div>
+        <select value={deptFilter} onChange={e => setDeptFilter(e.target.value)} className="input-field w-auto">
+          <option value="">All Departments</option>
+          {departments.map(d => <option key={d.id} value={d.name}>{d.name}</option>)}
+        </select>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)} className="input-field w-auto">
+          <option value="">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+          <option value="on_leave">On Leave</option>
+        </select>
+      </div>
+
+      {/* Employee Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {filtered.map(emp => (
+          <div key={emp.id} onClick={() => setSelectedEmployee(emp)} className="card p-5 hover:shadow-md transition-shadow cursor-pointer">
+            <div className="flex items-start gap-4">
+              <div className="w-12 h-12 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                {emp.firstName[0]}{emp.lastName[0]}
+              </div>
+              <div className="flex-1 min-w-0">
+                <h3 className="font-semibold text-gray-900 truncate">{emp.firstName} {emp.lastName}</h3>
+                <p className="text-sm text-gray-500 truncate">{emp.designation}</p>
+                <span className={`badge mt-1 ${emp.status === 'active' ? 'bg-green-100 text-green-700' : emp.status === 'on_leave' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600'}`}>
+                  {emp.status.replace('_', ' ')}
+                </span>
+              </div>
+            </div>
+            <div className="mt-4 space-y-1.5 text-sm text-gray-500">
+              <p className="flex items-center gap-2"><Mail className="w-3.5 h-3.5" /> {emp.email}</p>
+              <p className="flex items-center gap-2"><Calendar className="w-3.5 h-3.5" /> Joined {emp.joiningDate}</p>
+            </div>
+            <div className="mt-3 flex flex-wrap gap-1">
+              {emp.skills?.slice(0, 3).map(s => (
+                <span key={s} className="px-2 py-0.5 bg-indigo-50 text-indigo-600 text-xs rounded-md">{s}</span>
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Employee Detail Modal */}
+      {selectedEmployee && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setSelectedEmployee(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Employee Profile</h2>
+              <button onClick={() => setSelectedEmployee(null)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6">
+              <div className="flex items-center gap-4 mb-6">
+                <div className="w-16 h-16 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white font-bold text-2xl">
+                  {selectedEmployee.firstName[0]}{selectedEmployee.lastName[0]}
+                </div>
+                <div>
+                  <h3 className="text-xl font-bold text-gray-900">{selectedEmployee.firstName} {selectedEmployee.lastName}</h3>
+                  <p className="text-gray-500">{selectedEmployee.designation}</p>
+                  <p className="text-sm text-gray-400">{selectedEmployee.employeeId}</p>
+                </div>
+              </div>
+              <div className="grid grid-cols-2 gap-4 text-sm">
+                <div><span className="text-gray-500">Email:</span> <span className="font-medium">{selectedEmployee.email}</span></div>
+                <div><span className="text-gray-500">Phone:</span> <span className="font-medium">{selectedEmployee.phone || '—'}</span></div>
+                <div><span className="text-gray-500">Department:</span> <span className="font-medium">{selectedEmployee.department}</span></div>
+                <div><span className="text-gray-500">Team:</span> <span className="font-medium">{selectedEmployee.team || '—'}</span></div>
+                <div><span className="text-gray-500">Joining Date:</span> <span className="font-medium">{selectedEmployee.joiningDate}</span></div>
+                <div><span className="text-gray-500">Status:</span> <span className={`badge ${selectedEmployee.status === 'active' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-600'}`}>{selectedEmployee.status}</span></div>
+                <div><span className="text-gray-500">Role:</span> <span className="font-medium">{selectedEmployee.role.replace('_', ' ')}</span></div>
+                <div><span className="text-gray-500">Work Hours:</span> <span className="font-medium">{selectedEmployee.expectedWorkingHours}h/day</span></div>
+              </div>
+              {selectedEmployee.skills && selectedEmployee.skills.length > 0 && (
+                <div className="mt-4">
+                  <p className="text-sm text-gray-500 mb-2">Skills</p>
+                  <div className="flex flex-wrap gap-2">
+                    {selectedEmployee.skills.map(s => <span key={s} className="px-3 py-1 bg-indigo-50 text-indigo-600 text-sm rounded-lg">{s}</span>)}
+                  </div>
+                </div>
+              )}
+              <div className="mt-6 flex gap-3">
+                <button className="btn-primary flex-1">Edit Profile</button>
+                <button className="btn-secondary flex-1">View Reports</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between">
+              <h2 className="text-lg font-semibold">Add New Employee</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">First Name</label><input className="input-field" placeholder="John" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Last Name</label><input className="input-field" placeholder="Doe" /></div>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Email</label><input className="input-field" type="email" placeholder="john@company.com" /></div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Department</label>
+                  <select className="input-field">{departments.map(d => <option key={d.id}>{d.name}</option>)}</select></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Designation</label><input className="input-field" placeholder="Developer" /></div>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Joining Date</label><input className="input-field" type="date" /></div>
+                <div><label className="block text-sm font-medium text-gray-700 mb-1">Role</label>
+                  <select className="input-field"><option>Employee</option><option>Project Manager</option><option>Admin/HR</option></select></div>
+              </div>
+              <div><label className="block text-sm font-medium text-gray-700 mb-1">Phone</label><input className="input-field" placeholder="+91-XXXXXXXXXX" /></div>
+              <div className="flex gap-3 pt-4">
+                <button onClick={() => setShowCreateModal(false)} className="btn-primary flex-1">Create Employee</button>
+                <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
