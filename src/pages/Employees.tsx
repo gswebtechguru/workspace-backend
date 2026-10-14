@@ -12,6 +12,7 @@ export default function Employees() {
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [editingEmployee, setEditingEmployee] = useState<Employee | null>(null);
+  const [confirmAction, setConfirmAction] = useState<{ empId: string; action: 'activate' | 'deactivate' } | null>(null);
   const [newEmp, setNewEmp] = useState({
     firstName: '', lastName: '', username: '', password: '', email: '', phone: '',
     dateOfBirth: '', joiningDate: '', department: 'Engineering', designation: '',
@@ -68,12 +69,16 @@ export default function Employees() {
 
   const handleToggleStatus = (empId: string, currentStatus: string) => {
     const action = currentStatus === 'active' ? 'deactivate' : 'activate';
-    if (confirm(`Are you sure you want to ${action} this employee?`)) {
-      toggleEmployeeStatus(empId);
-      if (selectedEmployee?.id === empId) {
-        setSelectedEmployee(prev => prev ? { ...prev, status: prev.status === 'active' ? 'inactive' : 'active' } : null);
-      }
+    setConfirmAction({ empId, action });
+  };
+
+  const confirmToggleStatus = () => {
+    if (!confirmAction) return;
+    toggleEmployeeStatus(confirmAction.empId);
+    if (selectedEmployee?.id === confirmAction.empId) {
+      setSelectedEmployee(prev => prev ? { ...prev, status: prev.status === 'active' ? 'inactive' : 'active' } : null);
     }
+    setConfirmAction(null);
   };
 
   return (
@@ -239,6 +244,11 @@ export default function Employees() {
                         <input className="input-field bg-gray-50" value={editingEmployee.employeeId} disabled />
                       </div>
                     </div>
+                    <div>
+                      <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
+                      <input type="password" className="input-field" value={editingEmployee.password || ''} onChange={e => setEditingEmployee({...editingEmployee, password: e.target.value || undefined})} placeholder="Enter new password" />
+                      <p className="text-xs text-gray-500 mt-1">Leave blank to keep current password</p>
+                    </div>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
                         <label className="block text-sm font-medium text-gray-700 mb-1">Email</label>
@@ -383,6 +393,55 @@ export default function Employees() {
               <div className="flex gap-3 pt-4">
                 <button onClick={handleCreate} className="btn-primary flex-1">Create Employee</button>
                 <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">Cancel</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Confirmation Modal */}
+      {confirmAction && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setConfirmAction(null)}>
+          <div className="bg-white rounded-2xl w-full max-w-md" onClick={e => e.stopPropagation()}>
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <div className={`w-12 h-12 rounded-full flex items-center justify-center ${confirmAction.action === 'deactivate' ? 'bg-red-100' : 'bg-green-100'}`}>
+                  {confirmAction.action === 'deactivate' ? (
+                    <UserX className="w-6 h-6 text-red-600" />
+                  ) : (
+                    <UserCheck className="w-6 h-6 text-green-600" />
+                  )}
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-gray-900">
+                    {confirmAction.action === 'deactivate' ? 'Deactivate Employee' : 'Activate Employee'}
+                  </h3>
+                  <p className="text-sm text-gray-500">
+                    Are you sure you want to {confirmAction.action} this employee?
+                  </p>
+                </div>
+              </div>
+              {confirmAction.action === 'deactivate' && (
+                <div className="p-3 bg-amber-50 border border-amber-200 rounded-lg mb-4">
+                  <p className="text-xs text-amber-800">
+                    <strong>Note:</strong> Deactivated employees cannot log in or access the system. Their historical data will be preserved.
+                  </p>
+                </div>
+              )}
+              <div className="flex gap-3">
+                <button
+                  onClick={confirmToggleStatus}
+                  className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                    confirmAction.action === 'deactivate'
+                      ? 'bg-red-600 text-white hover:bg-red-700'
+                      : 'bg-green-600 text-white hover:bg-green-700'
+                  }`}
+                >
+                  {confirmAction.action === 'deactivate' ? 'Deactivate' : 'Activate'}
+                </button>
+                <button onClick={() => setConfirmAction(null)} className="btn-secondary flex-1">
+                  Cancel
+                </button>
               </div>
             </div>
           </div>
