@@ -33,7 +33,9 @@ export interface Employee {
   firstName: string;
   lastName: string;
   profilePhoto?: string;
-  email: string;
+  username: string;
+  password?: string;
+  email?: string;
   phone?: string;
   gender?: 'male' | 'female' | 'other';
   dateOfBirth?: string;

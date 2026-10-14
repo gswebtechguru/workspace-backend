@@ -135,7 +135,8 @@ export default function Layout({ children }: LayoutProps) {
                 <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-gray-200 overflow-hidden z-50">
                   <div className="px-4 py-3 border-b border-gray-100">
                     <p className="text-sm font-medium">{employee?.firstName} {employee?.lastName}</p>
-                    <p className="text-xs text-gray-500">{employee?.email}</p>
+                    <p className="text-xs text-gray-500">@{employee?.username}</p>
+                    {employee?.email && <p className="text-xs text-gray-400">{employee.email}</p>}
                     <span className="inline-block px-2 py-0.5 bg-indigo-100 text-indigo-700 text-xs rounded-full mt-1">{user?.role?.replace('_', ' ')}</span>
                   </div>
                   <div className="py-1">

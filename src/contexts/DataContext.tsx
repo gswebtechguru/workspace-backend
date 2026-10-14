@@ -30,9 +30,11 @@ interface DataContextType {
   updateLeaveRequest: (id: string, updates: Partial<LeaveRequest>) => void;
   // Projects
   updateProject: (id: string, updates: Partial<Project>) => void;
+  addProject: (project: Project) => void;
   // Employees
   addEmployee: (emp: Employee) => void;
   updateEmployee: (id: string, updates: Partial<Employee>) => void;
+  toggleEmployeeStatus: (id: string) => void;
   // Announcements
   addAnnouncement: (ann: Announcement) => void;
 }
@@ -43,7 +45,52 @@ export function DataProvider({ children }: { children: ReactNode }) {
   const [tasks, setTasks] = useState<Task[]>(initialTasks);
   const [attendanceRecords, setAttendanceRecords] = useState<AttendanceRecord[]>(initialAttendance);
   const [projectMessages, setProjectMessages] = useState<ProjectMessage[]>(initialMessages);
-  const [notifications, setNotifications] = useState<Notification[]>(initialNotifications);
+  const [notifications, setNotifications] = useState<Notification[]>(() => {
+    // Generate birthday and anniversary notifications
+    const allNotifs = [...initialNotifications];
+    const today = new Date();
+    const in2Days = new Date(today.getTime() + 2 * 86400000);
+    
+    initialEmployees.forEach(emp => {
+      if (emp.dateOfBirth) {
+        const dob = new Date(emp.dateOfBirth);
+        const thisYearBday = new Date(today.getFullYear(), dob.getMonth(), dob.getDate());
+        const diffDays = Math.ceil((thisYearBday.getTime() - today.getTime()) / 86400000);
+        if (diffDays >= 0 && diffDays <= 2) {
+          allNotifs.push({
+            id: `notif_bday_${emp.id}`,
+            userId: 'u7', // Admin user
+            type: 'announcement',
+            title: '🎂 Upcoming Birthday',
+            message: `${emp.firstName} ${emp.lastName}'s birthday is in ${diffDays} day${diffDays !== 1 ? 's' : ''} (${emp.dateOfBirth})`,
+            entityId: emp.id,
+            entityType: 'employee',
+            isRead: false,
+            createdAt: new Date().toISOString(),
+          });
+        }
+      }
+      // Joining anniversary
+      const joinDate = new Date(emp.joiningDate);
+      const thisYearAnniversary = new Date(today.getFullYear(), joinDate.getMonth(), joinDate.getDate());
+      const annDiffDays = Math.ceil((thisYearAnniversary.getTime() - today.getTime()) / 86400000);
+      if (annDiffDays >= 0 && annDiffDays <= 2 && today.getFullYear() > joinDate.getFullYear()) {
+        allNotifs.push({
+          id: `notif_ann_${emp.id}`,
+          userId: 'u7', // Admin user
+          type: 'announcement',
+          title: '🎉 Work Anniversary Approaching',
+          message: `${emp.firstName} ${emp.lastName}'s work anniversary is in ${annDiffDays} day${annDiffDays !== 1 ? 's' : ''}`,
+          entityId: emp.id,
+          entityType: 'employee',
+          isRead: false,
+          createdAt: new Date().toISOString(),
+        });
+      }
+    });
+    
+    return allNotifs;
+  });
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeave);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
@@ -140,6 +187,20 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setEmployees(prev => prev.map(e => e.id === id ? { ...e, ...updates } : e));
   }, []);
 
+  const toggleEmployeeStatus = useCallback((id: string) => {
+    setEmployees(prev => prev.map(e => {
+      if (e.id === id) {
+        const newStatus = e.status === 'active' ? 'inactive' : 'active';
+        return { ...e, status: newStatus };
+      }
+      return e;
+    }));
+  }, []);
+
+  const addProject = useCallback((project: Project) => {
+    setProjects(prev => [project, ...prev]);
+  }, []);
+
   const addAnnouncement = useCallback((ann: Announcement) => {
     setAnnouncements(prev => [ann, ...prev]);
   }, []);
@@ -149,8 +210,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
       tasks, attendanceRecords, projectMessages, notifications, leaveRequests, projects, employees, dailyReports, announcements,
       addTask, updateTask, completeTask, reopenTask, addTimeEntry,
       checkOut, addMessage, markNotificationRead, addNotification,
-      addLeaveRequest, updateLeaveRequest, updateProject,
-      addEmployee, updateEmployee, addAnnouncement,
+      addLeaveRequest, updateLeaveRequest, updateProject, addProject,
+      addEmployee, updateEmployee, toggleEmployeeStatus, addAnnouncement,
     }}>
       {children}
     </DataContext.Provider>

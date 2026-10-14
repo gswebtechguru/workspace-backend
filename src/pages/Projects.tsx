@@ -16,11 +16,16 @@ const priorityColors: Record<string, string> = {
 };
 
 export default function Projects() {
-  const { projects, tasks } = useData();
+  const { projects, tasks, addProject, employees } = useData();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');
   const [selectedProject, setSelectedProject] = useState<Project | null>(null);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [showCreateModal, setShowCreateModal] = useState(false);
+  const [newProject, setNewProject] = useState({
+    title: '', description: '', priority: 'medium' as 'low' | 'medium' | 'high' | 'critical',
+    targetDeliveryDate: '', projectManagerId: '', technologyStack: ''
+  });
 
   const filtered = projects.filter(p => {
     const matchSearch = !search || p.title.toLowerCase().includes(search.toLowerCase());
@@ -29,6 +34,36 @@ export default function Projects() {
   });
 
   const projectTasks = (projectId: string) => tasks.filter(t => t.projectId === projectId);
+
+  const handleCreateProject = () => {
+    if (!newProject.title || !newProject.targetDeliveryDate || !newProject.projectManagerId) {
+      alert('Please fill all required fields: Title, Target Delivery Date, and Project Manager');
+      return;
+    }
+    const today = new Date().toISOString().split('T')[0];
+    const project: Project = {
+      id: `p_${Date.now()}`,
+      projectId: `PRJ${String(projects.length + 1).padStart(3, '0')}`,
+      title: newProject.title,
+      description: newProject.description,
+      technologyStack: newProject.technologyStack ? newProject.technologyStack.split(',').map(t => t.trim()) : [],
+      projectManagerId: newProject.projectManagerId,
+      members: [{ id: `pm_${Date.now()}`, employeeId: newProject.projectManagerId, role: 'manager', joinedAt: today }],
+      startDate: today,
+      targetDeliveryDate: newProject.targetDeliveryDate,
+      priority: newProject.priority,
+      status: 'planning',
+      milestones: [],
+      estimatedHours: 0,
+      actualHours: 0,
+      progress: 0,
+      createdAt: today,
+      updatedAt: today,
+    };
+    addProject(project);
+    setShowCreateModal(false);
+    setNewProject({ title: '', description: '', priority: 'medium', targetDeliveryDate: '', projectManagerId: '', technologyStack: '' });
+  };
 
   return (
     <div className="space-y-6">
@@ -42,7 +77,7 @@ export default function Projects() {
             <button onClick={() => setViewMode('grid')} className={`px-3 py-1.5 text-xs font-medium rounded-md ${viewMode === 'grid' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>Grid</button>
             <button onClick={() => setViewMode('list')} className={`px-3 py-1.5 text-xs font-medium rounded-md ${viewMode === 'list' ? 'bg-white shadow text-gray-900' : 'text-gray-500'}`}>List</button>
           </div>
-          <button className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> New Project</button>
+          <button onClick={() => setShowCreateModal(true)} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> New Project</button>
         </div>
       </div>
 
@@ -228,6 +263,60 @@ export default function Projects() {
                     </div>
                   ))}
                 </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Create Project Modal */}
+      {showCreateModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50" onClick={() => setShowCreateModal(false)}>
+          <div className="bg-white rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
+            <div className="p-6 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white z-10">
+              <h2 className="text-lg font-semibold">Create New Project</h2>
+              <button onClick={() => setShowCreateModal(false)} className="p-2 hover:bg-gray-100 rounded-lg"><X className="w-5 h-5" /></button>
+            </div>
+            <div className="p-6 space-y-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project Title *</label>
+                <input className="input-field" value={newProject.title} onChange={e => setNewProject({...newProject, title: e.target.value})} placeholder="Enter project title" />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                <textarea className="input-field" rows={3} value={newProject.description} onChange={e => setNewProject({...newProject, description: e.target.value})} placeholder="Project description" />
+              </div>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Priority</label>
+                  <select className="input-field" value={newProject.priority} onChange={e => setNewProject({...newProject, priority: e.target.value as any})}>
+                    <option value="low">Low</option>
+                    <option value="medium">Medium</option>
+                    <option value="high">High</option>
+                    <option value="critical">Critical</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Target Delivery Date *</label>
+                  <input type="date" className="input-field" value={newProject.targetDeliveryDate} onChange={e => setNewProject({...newProject, targetDeliveryDate: e.target.value})} />
+                </div>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Project Manager *</label>
+                <select className="input-field" value={newProject.projectManagerId} onChange={e => setNewProject({...newProject, projectManagerId: e.target.value})}>
+                  <option value="">Select manager</option>
+                  {employees.filter(e => e.role === 'project_manager' || e.role === 'admin_hr').map(e => (
+                    <option key={e.id} value={e.id}>{e.firstName} {e.lastName}</option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Technology Stack</label>
+                <input className="input-field" value={newProject.technologyStack} onChange={e => setNewProject({...newProject, technologyStack: e.target.value})} placeholder="React, Laravel, MySQL (comma separated)" />
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button onClick={handleCreateProject} className="btn-primary flex-1">Create Project</button>
+                <button onClick={() => setShowCreateModal(false)} className="btn-secondary flex-1">Cancel</button>
               </div>
             </div>
           </div>

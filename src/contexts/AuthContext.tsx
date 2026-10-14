@@ -27,18 +27,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [employee, setEmployee] = useState<Employee | null>(null);
 
-  const login = useCallback(async (username: string, _password: string): Promise<{ success: boolean; redirectPath: string }> => {
+  const login = useCallback(async (loginUsername: string, _password: string): Promise<{ success: boolean; redirectPath: string }> => {
     const emp = employees.find(e => 
-      e.email.toLowerCase() === username.toLowerCase() || 
-      e.employeeId.toLowerCase() === username.toLowerCase()
+      e.username.toLowerCase() === loginUsername.toLowerCase() || 
+      (e.email && e.email.toLowerCase() === loginUsername.toLowerCase()) || 
+      e.employeeId.toLowerCase() === loginUsername.toLowerCase()
     );
     if (!emp) return { success: false, redirectPath: '/login' };
     if (emp.status !== 'active') return { success: false, redirectPath: '/login' };
     
     const mockUser: User = {
       id: emp.userId,
-      username: emp.email.split('@')[0],
-      email: emp.email,
+      username: emp.username,
+      email: emp.email || '',
       role: emp.role,
       isActive: true,
       lastLoginAt: new Date().toISOString(),

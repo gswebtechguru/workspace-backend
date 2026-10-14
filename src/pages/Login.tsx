@@ -25,7 +25,7 @@ export default function Login() {
       if (result.success) {
         navigate(result.redirectPath);
       } else {
-        setError('Invalid credentials. Try: rajesh@company.com or EMP001 (any password)');
+        setError('Invalid credentials. Try username: rajesh.kumar (any password for demo)');
       }
     } catch {
       setError('Login failed. Please try again.');
@@ -62,9 +62,9 @@ export default function Login() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Email or Employee ID</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Username</label>
               <input type="text" value={username} onChange={e => setUsername(e.target.value)}
-                className="input-field" placeholder="rajesh@company.com or EMP001" />
+                className="input-field" placeholder="Enter username (e.g., rajesh.kumar)" />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">Password</label>
@@ -82,23 +82,23 @@ export default function Login() {
           </form>
 
           <div className="mt-6 p-4 bg-gray-50 rounded-lg">
-            <p className="text-xs font-medium text-gray-600 mb-3">Quick Login (Demo Accounts):</p>
+            <p className="text-xs font-medium text-gray-600 mb-3">Quick Login (Demo Accounts - use any password):</p>
             <div className="space-y-2">
-              <button onClick={() => quickLogin('suresh@company.com')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+              <button onClick={() => quickLogin('suresh.nair')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                 <p className="text-xs font-medium text-gray-900">Admin/HR — Suresh Nair</p>
-                <p className="text-xs text-gray-500">suresh@company.com</p>
+                <p className="text-xs text-gray-500">Username: suresh.nair</p>
               </button>
-              <button onClick={() => quickLogin('rajesh@company.com')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+              <button onClick={() => quickLogin('rajesh.kumar')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                 <p className="text-xs font-medium text-gray-900">Project Manager — Rajesh Kumar</p>
-                <p className="text-xs text-gray-500">rajesh@company.com</p>
+                <p className="text-xs text-gray-500">Username: rajesh.kumar</p>
               </button>
-              <button onClick={() => quickLogin('priya@company.com')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+              <button onClick={() => quickLogin('priya.sharma')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                 <p className="text-xs font-medium text-gray-900">Employee — Priya Sharma</p>
-                <p className="text-xs text-gray-500">priya@company.com</p>
+                <p className="text-xs text-gray-500">Username: priya.sharma</p>
               </button>
-              <button onClick={() => quickLogin('EMP006')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
+              <button onClick={() => quickLogin('ananya.gupta')} className="w-full text-left px-3 py-2 bg-white rounded-lg border border-gray-200 hover:border-indigo-300 hover:bg-indigo-50 transition-colors">
                 <p className="text-xs font-medium text-gray-900">Employee — Ananya Gupta</p>
-                <p className="text-xs text-gray-500">EMP006 (by Employee ID)</p>
+                <p className="text-xs text-gray-500">Username: ananya.gupta</p>
               </button>
             </div>
           </div>
