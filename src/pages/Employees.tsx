@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
-import { departments } from '../data/mockData';
 import { Search, Plus, Mail, Calendar, X, Edit2, UserCheck, UserX } from 'lucide-react';
 import { Employee } from '../types';
 
 export default function Employees() {
-  const { employees, addEmployee, updateEmployee, toggleEmployeeStatus } = useData();
+  const { employees, departments, addEmployee, updateEmployee, toggleEmployeeStatus } = useData();
   const [search, setSearch] = useState('');
   const [deptFilter, setDeptFilter] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

@@ -1,7 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useData } from '../contexts/DataContext';
-import { employees } from '../data/mockData';
 import { Users, FolderKanban, CheckSquare, Clock, AlertTriangle, FileWarning, ArrowUpRight, ArrowDownRight, BarChart3, Calendar, Target } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, AreaChart, Area } from 'recharts';
 import { DateFilter } from '../types';
@@ -50,7 +49,8 @@ function getDateRange(filter: DateFilter): { start: Date; end: Date } {
 }
 
 export default function AdminDashboard() {
-  const { tasks, projects, attendanceRecords, leaveRequests, employees: allEmployees } = useData();
+  const { tasks, projects, attendanceRecords, leaveRequests, employees } = useData();
+  const allEmployees = employees;
   const [dateFilter, setDateFilter] = useState<DateFilter>('today');
   
   const dateRange = useMemo(() => getDateRange(dateFilter), [dateFilter]);

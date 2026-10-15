@@ -1,6 +1,6 @@
 import React, { createContext, useContext, useState, useCallback, ReactNode } from 'react';
-import { Task, AttendanceRecord, ProjectMessage, Notification, LeaveRequest, LeaveType, Project, Employee, DailyWorkReport, Announcement, TimeEntry } from '../types';
-import { tasks as initialTasks, attendanceRecords as initialAttendance, projectMessages as initialMessages, notifications as initialNotifications, leaveRequests as initialLeave, leaveTypes as initialLeaveTypes, projects as initialProjects, employees as initialEmployees, dailyReports as initialReports, announcements as initialAnnouncements } from '../data/mockData';
+import { Task, AttendanceRecord, ProjectMessage, Notification, LeaveRequest, LeaveType, Project, Employee, DailyWorkReport, Announcement, TimeEntry, Department, CompanySettings } from '../types';
+import { tasks as initialTasks, attendanceRecords as initialAttendance, projectMessages as initialMessages, notifications as initialNotifications, leaveRequests as initialLeave, leaveTypes as initialLeaveTypes, projects as initialProjects, employees as initialEmployees, dailyReports as initialReports, announcements as initialAnnouncements, departments as initialDepartments, companySettings as initialCompanySettings } from '../data/mockData';
 
 interface DataContextType {
   tasks: Task[];
@@ -13,6 +13,11 @@ interface DataContextType {
   employees: Employee[];
   dailyReports: DailyWorkReport[];
   announcements: Announcement[];
+  departments: Department[];
+  companySettings: CompanySettings;
+  // Helper functions
+  getEmployeeName: (id: string) => string;
+  getProjectName: (id: string) => string;
   // Task operations
   addTask: (task: Task) => void;
   updateTask: (id: string, updates: Partial<Task>) => void;
@@ -98,6 +103,8 @@ export function DataProvider({ children }: { children: ReactNode }) {
   });
   const [leaveRequests, setLeaveRequests] = useState<LeaveRequest[]>(initialLeave);
   const [leaveTypes] = useState<LeaveType[]>(initialLeaveTypes);
+  const [departments] = useState<Department[]>(initialDepartments);
+  const [companySettings] = useState<CompanySettings>(initialCompanySettings);
   const [projects, setProjects] = useState<Project[]>(initialProjects);
   const [employees, setEmployees] = useState<Employee[]>(initialEmployees);
   const [dailyReports, setDailyReports] = useState<DailyWorkReport[]>(initialReports);
@@ -246,9 +253,21 @@ export function DataProvider({ children }: { children: ReactNode }) {
     setAnnouncements(prev => [ann, ...prev]);
   }, []);
 
+  // Helper functions
+  const getEmployeeName = useCallback((id: string): string => {
+    const emp = employees.find(e => e.id === id);
+    return emp ? `${emp.firstName} ${emp.lastName}` : 'Unknown';
+  }, [employees]);
+
+  const getProjectName = useCallback((id: string): string => {
+    const proj = projects.find(p => p.id === id);
+    return proj ? proj.title : 'Unknown Project';
+  }, [projects]);
+
   return (
     <DataContext.Provider value={{
-      tasks, attendanceRecords, projectMessages, notifications, leaveRequests, leaveTypes, projects, employees, dailyReports, announcements,
+      tasks, attendanceRecords, projectMessages, notifications, leaveRequests, leaveTypes, projects, employees, dailyReports, announcements, departments, companySettings,
+      getEmployeeName, getProjectName,
       addTask, updateTask, completeTask, reopenTask, addTimeEntry,
       checkOut, addMessage, deleteMessage, markNotificationRead, addNotification,
       addLeaveRequest, updateLeaveRequest, updateProject, addProject, deleteProject, addProjectMember, removeProjectMember,

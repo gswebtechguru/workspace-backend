@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { projects, employees, getEmployeeName, getProjectName } from '../data/mockData';
 import { Search, Plus, AlertTriangle, CheckCircle2, Clock, Calendar, XCircle, Pause, X } from 'lucide-react';
 import { Task, TaskStatus } from '../types';
 
@@ -14,7 +13,7 @@ const statusConfig: Record<TaskStatus, { color: string }> = {
 };
 
 export default function Tasks() {
-  const { tasks, addTask, completeTask, reopenTask, addTimeEntry } = useData();
+  const { tasks, projects, employees, addTask, completeTask, reopenTask, addTimeEntry, getEmployeeName, getProjectName } = useData();
   const { employee } = useAuth();
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('');

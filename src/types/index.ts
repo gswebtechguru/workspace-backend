@@ -330,6 +330,13 @@ export interface CompanySettings {
   minTimeEntryMinutes: number;
 }
 
+export interface Department {
+  id: string;
+  name: string;
+  description?: string;
+  headId?: string;
+}
+
 export interface DashboardMetrics {
   totalEmployees: number;
   activeEmployees: number;

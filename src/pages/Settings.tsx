@@ -1,11 +1,11 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { employees, companySettings } from '../data/mockData';
 import { Building2, Clock, Calendar, Bell, Shield, Save, Plus, X } from 'lucide-react';
 import { Announcement } from '../types';
 
 export default function SettingsPage() {
+  const { companySettings } = useData();
   const [activeSection, setActiveSection] = useState('general');
 
   const sections = [
@@ -142,7 +142,7 @@ export default function SettingsPage() {
 }
 
 export function Announcements() {
-  const { announcements, addAnnouncement } = useData();
+  const { announcements, addAnnouncement, employees } = useData();
   const { employee } = useAuth();
   const [showCreate, setShowCreate] = useState(false);
   const [newAnn, setNewAnn] = useState({ title: '', content: '', audience: 'all' as const, expiresAt: '' });

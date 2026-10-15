@@ -1,12 +1,11 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { getProjectName } from '../data/mockData';
 import { Calendar } from 'lucide-react';
 
 export default function Reports() {
   const { employee } = useAuth();
-  const { dailyReports, tasks, projects: allProjects, employees: allEmployees } = useData();
+  const { dailyReports, tasks, projects: allProjects, employees: allEmployees, getProjectName } = useData();
   const [activeTab, setActiveTab] = useState<'daily' | 'project' | 'history'>('daily');
   const [selectedEmployee, setSelectedEmployee] = useState('');
 

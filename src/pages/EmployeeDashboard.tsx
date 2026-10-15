@@ -2,13 +2,12 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
-import { getProjectName } from '../data/mockData';
 import { Clock, CheckCircle2, AlertTriangle, Calendar, Plus, TrendingUp, Bell, FolderKanban, ArrowRight, X } from 'lucide-react';
 
 export default function EmployeeDashboard() {
   const navigate = useNavigate();
   const { employee } = useAuth();
-  const { tasks, projects, attendanceRecords, notifications, checkOut, completeTask } = useData();
+  const { tasks, projects, attendanceRecords, notifications, checkOut, completeTask, getProjectName } = useData();
   const [showAddTask, setShowAddTask] = useState(false);
   const [newTaskTitle, setNewTaskTitle] = useState('');
   const [newTaskProject, setNewTaskProject] = useState('');

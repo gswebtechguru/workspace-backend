@@ -1,11 +1,10 @@
 import React, { useState } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { leaveTypes } from '../data/mockData';
 import { Clock, UserCheck, XCircle, AlertCircle } from 'lucide-react';
 
 export default function Attendance() {
-  const { attendanceRecords, employees, leaveRequests, addLeaveRequest, updateLeaveRequest } = useData();
+  const { attendanceRecords, employees, leaveRequests, leaveTypes, addLeaveRequest, updateLeaveRequest } = useData();
   const { employee } = useAuth();
   const [activeTab, setActiveTab] = useState<'attendance' | 'leave'>('attendance');
   const [dateFilter, setDateFilter] = useState(new Date().toISOString().split('T')[0]);

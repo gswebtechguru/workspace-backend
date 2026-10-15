@@ -1,12 +1,11 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { getEmployeeName } from '../data/mockData';
 import { Send, Paperclip, Pin, Search, Reply, MoreHorizontal, Image, AtSign } from 'lucide-react';
 import { ProjectMessage } from '../types';
 
 export default function Chat() {
-  const { projectMessages, addMessage, projects } = useData();
+  const { projectMessages, addMessage, projects, getEmployeeName } = useData();
   const { employee } = useAuth();
   const [message, setMessage] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
