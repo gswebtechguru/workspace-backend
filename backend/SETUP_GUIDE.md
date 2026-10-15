@@ -2,22 +2,28 @@
 
 ## What Was Delivered
 
-I generated the **PHP code files** for a Laravel 11 backend, including:
+I generated the **PHP code files** for a Laravel 13 backend, including:
 
 ✅ **6 Database Migration Files** (38 tables)
 ✅ **20+ Eloquent Models** with relationships
 ✅ **11 API Controllers** with business logic
 ✅ **API Routes** (50+ endpoints)
 ✅ **Database Seeder** with sample data
-✅ **Laravel 11 Configuration Files** (bootstrap/app.php, cors.php)
+✅ **Laravel 13 Configuration Files** (bootstrap/app.php, cors.php)
 ✅ **Setup Script** (setup.sh)
 ✅ **Deployment Guide** (DEPLOYMENT.md)
+
+**Requirements:**
+- PHP 8.3+ (required for Laravel 13)
+- MySQL 8.0+ or PostgreSQL 13+
+- Redis 6.0+
+- Composer 2.5+
 
 ## What You Need To Do
 
 **I did NOT create a complete Laravel project.** You need to:
 
-1. **Create a Laravel 11 project** using Composer
+1. **Create a Laravel 13 project** using Composer
 2. **Copy my files** into that project
 3. **Install dependencies**
 4. **Configure database**
@@ -37,14 +43,14 @@ chmod +x setup.sh
 ./setup.sh
 ```
 
-The script will guide you through the entire setup process.
+The script will guide you through the entire setup process and verify PHP 8.3+ is installed.
 
 ### Option 2: Manual Setup
 
-#### Step 1: Create Laravel 11 Project
+#### Step 1: Create Laravel 13 Project
 
 ```bash
-composer create-project laravel/laravel workforce-pro-backend "11.*"
+composer create-project laravel/laravel workforce-pro-backend "13.*"
 cd workforce-pro-backend
 ```
 

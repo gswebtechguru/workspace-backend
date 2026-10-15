@@ -2,7 +2,7 @@
 
 ## 🎯 What Was Delivered
 
-A **complete, production-ready Laravel backend** for the WorkForce Pro Employee & Project Management System with:
+A **complete, production-ready Laravel 13 backend** for the WorkForce Pro Employee & Project Management System with:
 
 ✅ **38 Database Tables** with proper relationships, indexes, and constraints
 ✅ **20+ Eloquent Models** with all relationships defined
@@ -10,6 +10,13 @@ A **complete, production-ready Laravel backend** for the WorkForce Pro Employee 
 ✅ **Complete API Routes** with authentication and authorization
 ✅ **Database Seeder** with sample data
 ✅ **VPS Deployment Guide** with step-by-step instructions
+
+**Tech Stack:**
+- Laravel 13 (released March 2026)
+- PHP 8.3+ (required)
+- MySQL 8.0+ / PostgreSQL 13+
+- Redis 6.0+
+- Laravel Sanctum 4.x for authentication
 
 ---
 

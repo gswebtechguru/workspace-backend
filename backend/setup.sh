@@ -1,14 +1,32 @@
 #!/bin/bash
 
-# WorkForce Pro - Laravel 11 Backend Setup Script
+# WorkForce Pro - Laravel 13 Backend Setup Script
 # Run this script to set up the complete backend
+# Requirements: PHP 8.3+, MySQL 8.0+, Redis 6.0+, Composer 2.5+
 
-echo "🚀 Setting up WorkForce Pro Laravel 11 Backend..."
+echo "🚀 Setting up WorkForce Pro Laravel 13 Backend..."
 echo ""
 
-# Step 1: Create Laravel 11 project
-echo "📦 Creating Laravel 11 project..."
-composer create-project laravel/laravel workforce-pro-backend "11.*"
+# Check PHP version
+if ! command -v php &> /dev/null; then
+    echo "❌ PHP is not installed. Please install PHP 8.3 or higher first."
+    exit 1
+fi
+
+PHP_VERSION=$(php -r "echo PHP_MAJOR_VERSION.'.'.PHP_MINOR_VERSION;")
+echo "✓ PHP version: $PHP_VERSION"
+
+# Check if PHP version is 8.3 or higher
+if [[ $(echo "$PHP_VERSION < 8.3" | bc) -eq 1 ]]; then
+    echo "❌ PHP version $PHP_VERSION is too old. Laravel 13 requires PHP 8.3 or higher."
+    exit 1
+fi
+
+echo ""
+
+# Step 1: Create Laravel 13 project
+echo "📦 Creating Laravel 13 project..."
+composer create-project laravel/laravel workforce-pro-backend "13.*"
 cd workforce-pro-backend
 
 # Step 2: Install required packages

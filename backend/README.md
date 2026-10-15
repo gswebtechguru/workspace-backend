@@ -1,8 +1,14 @@
-# WorkForce Pro - Laravel Backend
+# WorkForce Pro - Laravel 13 Backend
 
 ## Complete Backend API with Database Migrations
 
-This directory contains the full Laravel backend for the WorkForce Pro Employee & Project Management System.
+This directory contains the full Laravel 13 backend for the WorkForce Pro Employee & Project Management System.
+
+**Requirements:**
+- PHP 8.3+ (required for Laravel 13)
+- MySQL 8.0+ or PostgreSQL 13+
+- Redis 6.0+
+- Composer 2.5+
 
 ## 📁 Structure
 
