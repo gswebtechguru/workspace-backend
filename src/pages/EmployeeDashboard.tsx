@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../contexts/AuthContext';
 import { useData } from '../contexts/DataContext';
 import { getProjectName } from '../data/mockData';
 import { Clock, CheckCircle2, AlertTriangle, Calendar, Plus, TrendingUp, Bell, FolderKanban, ArrowRight, X } from 'lucide-react';
 
 export default function EmployeeDashboard() {
+  const navigate = useNavigate();
   const { employee } = useAuth();
   const { tasks, projects, attendanceRecords, notifications, checkOut, completeTask } = useData();
   const [showAddTask, setShowAddTask] = useState(false);
@@ -50,7 +52,7 @@ export default function EmployeeDashboard() {
           <h1 className="text-2xl font-bold text-gray-900">Good {new Date().getHours() < 12 ? 'Morning' : new Date().getHours() < 17 ? 'Afternoon' : 'Evening'}, {employee.firstName}!</h1>
           <p className="text-sm text-gray-500">{new Date().toLocaleDateString('en-US', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })}</p>
         </div>
-        <button onClick={() => setShowAddTask(true)} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Task</button>
+        <button onClick={() => navigate('/my-projects')} className="btn-primary flex items-center gap-2"><Plus className="w-4 h-4" /> Add Task</button>
       </div>
 
       {/* Attendance Status */}
@@ -102,26 +104,26 @@ export default function EmployeeDashboard() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <div className="card p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-blue-100 flex items-center justify-center"><Calendar className="w-5 h-5 text-blue-600" /></div>
-            <div><p className="text-xl font-bold text-gray-900">{todayTasks.length}</p><p className="text-xs text-gray-500">Today's Tasks</p></div>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-teal-400 to-emerald-600 flex items-center justify-center shadow-sm"><Calendar className="w-5 h-5 text-white" /></div>
+            <div><p className="text-xl font-bold text-gray-900 dark:text-slate-100">{todayTasks.length}</p><p className="text-xs text-gray-500 dark:text-slate-400">Today's Tasks</p></div>
           </div>
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-green-100 flex items-center justify-center"><CheckCircle2 className="w-5 h-5 text-green-600" /></div>
-            <div><p className="text-xl font-bold text-gray-900">{completedToday.length}</p><p className="text-xs text-gray-500">Completed</p></div>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center shadow-sm"><CheckCircle2 className="w-5 h-5 text-white" /></div>
+            <div><p className="text-xl font-bold text-gray-900 dark:text-slate-100">{completedToday.length}</p><p className="text-xs text-gray-500 dark:text-slate-400">Completed</p></div>
           </div>
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-red-100 flex items-center justify-center"><AlertTriangle className="w-5 h-5 text-red-600" /></div>
-            <div><p className="text-xl font-bold text-gray-900">{overdueTasks.length}</p><p className="text-xs text-gray-500">Overdue</p></div>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-red-400 to-red-600 flex items-center justify-center shadow-sm"><AlertTriangle className="w-5 h-5 text-white" /></div>
+            <div><p className="text-xl font-bold text-gray-900 dark:text-slate-100">{overdueTasks.length}</p><p className="text-xs text-gray-500 dark:text-slate-400">Overdue</p></div>
           </div>
         </div>
         <div className="card p-4">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-lg bg-purple-100 flex items-center justify-center"><TrendingUp className="w-5 h-5 text-purple-600" /></div>
-            <div><p className="text-xl font-bold text-gray-900">{(totalActualToday / 60).toFixed(1)}h</p><p className="text-xs text-gray-500">of {(totalEstimatedToday / 60).toFixed(1)}h planned</p></div>
+            <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-purple-400 to-purple-600 flex items-center justify-center shadow-sm"><TrendingUp className="w-5 h-5 text-white" /></div>
+            <div><p className="text-xl font-bold text-gray-900 dark:text-slate-100">{(totalActualToday / 60).toFixed(1)}h</p><p className="text-xs text-gray-500 dark:text-slate-400">of {(totalEstimatedToday / 60).toFixed(1)}h planned</p></div>
           </div>
         </div>
       </div>
@@ -174,11 +176,11 @@ export default function EmployeeDashboard() {
             </div>
             <div className="space-y-2">
               {userNotifs.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No notifications</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 text-center py-4">No notifications</p>
               ) : userNotifs.slice(0, 5).map(n => (
-                <div key={n.id} className={`p-2.5 rounded-lg text-sm ${!n.isRead ? 'bg-indigo-50' : 'bg-gray-50'}`}>
-                  <p className="font-medium text-gray-900 text-xs">{n.title}</p>
-                  <p className="text-xs text-gray-500 mt-0.5">{n.message}</p>
+                <div key={n.id} className={`p-2.5 rounded-lg text-sm ${!n.isRead ? 'bg-emerald-50 dark:bg-emerald-900/20' : 'bg-gray-50 dark:bg-slate-700'}`}>
+                  <p className={`text-xs ${!n.isRead ? 'font-bold text-gray-900 dark:text-slate-100' : 'font-medium text-gray-700 dark:text-slate-300'}`}>{n.title}</p>
+                  <p className="text-xs text-gray-500 dark:text-slate-400 mt-0.5">{n.message}</p>
                 </div>
               ))}
             </div>
@@ -189,15 +191,15 @@ export default function EmployeeDashboard() {
             <h3 className="font-semibold text-gray-900 flex items-center gap-2 mb-3"><FolderKanban className="w-4 h-4" /> My Projects</h3>
             <div className="space-y-2">
               {myProjects.length === 0 ? (
-                <p className="text-sm text-gray-500 text-center py-4">No projects assigned</p>
+                <p className="text-sm text-gray-500 dark:text-slate-400 text-center py-4">No projects assigned</p>
               ) : myProjects.map(p => (
-                <div key={p.id} className="p-2.5 bg-gray-50 rounded-lg">
+                <div key={p.id} className="p-2.5 bg-gray-50 dark:bg-slate-700 rounded-lg">
                   <div className="flex items-center justify-between">
-                    <p className="text-sm font-medium text-gray-900 truncate">{p.title}</p>
-                    <span className="text-xs font-medium text-indigo-600">{calculateProgress(p.id)}%</span>
+                    <p className="text-sm font-medium text-gray-900 dark:text-slate-100 truncate">{p.title}</p>
+                    <span className="text-xs font-medium text-emerald-600 dark:text-emerald-400">{calculateProgress(p.id)}%</span>
                   </div>
-                  <div className="w-full h-1.5 bg-gray-200 rounded-full mt-1.5 overflow-hidden">
-                    <div className="h-full bg-indigo-500 rounded-full" style={{ width: `${calculateProgress(p.id)}%` }} />
+                  <div className="w-full h-1.5 bg-gray-200 dark:bg-slate-600 rounded-full mt-1.5 overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-emerald-400 to-green-600 rounded-full" style={{ width: `${calculateProgress(p.id)}%` }} />
                   </div>
                 </div>
               ))}

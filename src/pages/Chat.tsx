@@ -1,17 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { useData } from '../contexts/DataContext';
 import { useAuth } from '../contexts/AuthContext';
-import { projects, getEmployeeName } from '../data/mockData';
+import { getEmployeeName } from '../data/mockData';
 import { Send, Paperclip, Pin, Search, Reply, MoreHorizontal, Image, AtSign } from 'lucide-react';
 import { ProjectMessage } from '../types';
 
 export default function Chat() {
-  const { projectMessages, addMessage } = useData();
+  const { projectMessages, addMessage, projects } = useData();
   const { employee } = useAuth();
-  const [selectedProject, setSelectedProject] = useState(projects[0]);
   const [message, setMessage] = useState('');
   const [replyTo, setReplyTo] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Filter projects based on role - Admin sees all, employees see only assigned
+  const isAdmin = employee?.role === 'admin';
+  const accessibleProjects = isAdmin 
+    ? projects 
+    : projects.filter(p => p.members.some(m => m.employeeId === employee?.id));
+
+  const [selectedProject, setSelectedProject] = useState(accessibleProjects[0]);
 
   const projectMsgs = projectMessages.filter(m => m.projectId === selectedProject.id && !m.isDeleted);
   const pinnedMsgs = projectMsgs.filter(m => m.isPinned);
@@ -58,14 +65,14 @@ export default function Chat() {
           <h3 className="font-semibold text-gray-900 text-sm">Project Channels</h3>
         </div>
         <div className="flex-1 overflow-y-auto p-2 space-y-1">
-          {projects.filter(p => p.status === 'active' || p.status === 'on_hold').map(p => (
+          {accessibleProjects.filter(p => p.status === 'active' || p.status === 'on_hold').map(p => (
             <button key={p.id} onClick={() => setSelectedProject(p)}
-              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${selectedProject.id === p.id ? 'bg-indigo-50 text-indigo-700 font-medium' : 'text-gray-600 hover:bg-gray-50'}`}>
+              className={`w-full text-left px-3 py-2.5 rounded-lg text-sm transition-colors ${selectedProject.id === p.id ? 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-300 font-medium' : 'text-gray-600 dark:text-slate-300 hover:bg-gray-50 dark:hover:bg-slate-700'}`}>
               <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-green-500' : 'bg-amber-400'}`} />
+                <div className={`w-2 h-2 rounded-full ${p.status === 'active' ? 'bg-emerald-500' : 'bg-amber-400'}`} />
                 <span className="truncate">{p.title}</span>
               </div>
-              <p className="text-xs text-gray-400 mt-0.5 ml-4">{p.members.length} members</p>
+              <p className="text-xs text-gray-400 dark:text-slate-500 mt-0.5 ml-4">{p.members.length} members</p>
             </button>
           ))}
         </div>
@@ -108,24 +115,24 @@ export default function Chat() {
             const repliedMsg = msg.replyToId ? projectMsgs.find(m => m.id === msg.replyToId) : null;
             return (
               <div key={msg.id} className={`flex gap-3 ${isCurrentUser ? 'flex-row-reverse' : ''}`}>
-                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                <div className="w-8 h-8 rounded-full bg-gradient-to-br from-emerald-400 to-green-600 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
                   {senderInitials}
                 </div>
                 <div className={`max-w-[70%] flex flex-col ${isCurrentUser ? 'items-end' : 'items-start'}`}>
                   <div className="flex items-center gap-2 mb-1">
-                    <span className="text-xs font-medium text-gray-700">{sender}</span>
-                    <span className="text-xs text-gray-400">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                    <span className="text-xs font-medium text-gray-700 dark:text-slate-300">{sender}</span>
+                    <span className="text-xs text-gray-400 dark:text-slate-500">{new Date(msg.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
                     {msg.isPinned && <Pin className="w-3 h-3 text-amber-500" />}
                   </div>
                   {repliedMsg && (
-                    <div className="mb-1 px-3 py-1.5 bg-gray-50 rounded-lg border-l-2 border-indigo-300 text-xs text-gray-500 max-w-full">
+                    <div className="mb-1 px-3 py-1.5 bg-gray-50 dark:bg-slate-700 rounded-lg border-l-2 border-emerald-300 dark:border-emerald-600 text-xs text-gray-500 dark:text-slate-400 max-w-full">
                       <span className="font-medium">{getEmployeeName(repliedMsg.senderId)}:</span> {repliedMsg.content.slice(0, 60)}{repliedMsg.content.length > 60 ? '...' : ''}
                     </div>
                   )}
-                  <div className={`px-4 py-2.5 rounded-2xl text-sm ${isCurrentUser ? 'bg-indigo-600 text-white rounded-tr-md' : 'bg-gray-100 text-gray-800 rounded-tl-md'}`}>
+                  <div className={`px-4 py-2.5 rounded-2xl text-sm ${isCurrentUser ? 'bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-tr-md shadow-sm' : 'bg-gray-100 dark:bg-slate-700 text-gray-800 dark:text-slate-200 rounded-tl-md'}`}>
                     {msg.content}
                   </div>
-                  <button onClick={() => setReplyTo(msg.id)} className="mt-1 text-xs text-gray-400 hover:text-indigo-600 flex items-center gap-1">
+                  <button onClick={() => setReplyTo(msg.id)} className="mt-1 text-xs text-gray-400 dark:text-slate-500 hover:text-emerald-600 dark:hover:text-emerald-400 flex items-center gap-1">
                     <Reply className="w-3 h-3" /> Reply
                   </button>
                 </div>
@@ -158,7 +165,7 @@ export default function Chat() {
                 <AtSign className="w-4 h-4" />
               </button>
             </div>
-            <button onClick={handleSend} disabled={!message.trim()} className="p-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed">
+            <button onClick={handleSend} disabled={!message.trim()} className="p-2 bg-gradient-to-r from-emerald-500 to-green-600 text-white rounded-lg hover:from-emerald-600 hover:to-green-700 disabled:opacity-50 disabled:cursor-not-allowed shadow-sm">
               <Send className="w-4 h-4" />
             </button>
           </div>

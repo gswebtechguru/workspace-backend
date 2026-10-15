@@ -5,19 +5,19 @@ import { Search, Plus, Users, Calendar, MessageSquare } from 'lucide-react';
 import { Project, ProjectStatus } from '../types';
 
 const statusColors: Record<ProjectStatus, string> = {
-  planning: 'bg-gray-100 text-gray-700',
-  active: 'bg-green-100 text-green-700',
-  on_hold: 'bg-red-100 text-red-700',
-  completed: 'bg-green-100 text-green-700',
-  cancelled: 'bg-red-100 text-red-700',
-  archived: 'bg-gray-100 text-gray-600',
+  planning: 'bg-gray-100 dark:bg-slate-700 text-gray-700 dark:text-slate-300',
+  active: 'bg-emerald-100 dark:bg-emerald-900/50 text-emerald-700 dark:text-emerald-300',
+  on_hold: 'bg-amber-100 dark:bg-amber-900/50 text-amber-700 dark:text-amber-300',
+  completed: 'bg-green-100 dark:bg-green-900/50 text-green-700 dark:text-green-300',
+  cancelled: 'bg-red-100 dark:bg-red-900/50 text-red-700 dark:text-red-300',
+  archived: 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
 };
 
 const priorityColors: Record<string, string> = {
-  low: 'bg-gray-100 text-gray-600',
-  medium: 'bg-blue-100 text-blue-600',
-  high: 'bg-amber-100 text-amber-600',
-  critical: 'bg-red-100 text-red-600',
+  low: 'bg-gray-100 dark:bg-slate-700 text-gray-600 dark:text-slate-400',
+  medium: 'bg-teal-100 dark:bg-teal-900/50 text-teal-600 dark:text-teal-300',
+  high: 'bg-amber-100 dark:bg-amber-900/50 text-amber-600 dark:text-amber-300',
+  critical: 'bg-red-100 dark:bg-red-900/50 text-red-600 dark:text-red-300',
 };
 
 export default function Projects() {
@@ -104,9 +104,9 @@ export default function Projects() {
                     <span>Progress</span>
                     <span>{calculateProgress(p.id)}%</span>
                   </div>
-                  <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                  <div className="w-full h-2 bg-gray-100 dark:bg-slate-700 rounded-full overflow-hidden">
                     <div
-                      className={`h-full rounded-full ${calculateProgress(p.id) >= 75 ? 'bg-green-500' : calculateProgress(p.id) >= 50 ? 'bg-blue-500' : 'bg-amber-500'}`}
+                      className={`h-full rounded-full transition-all duration-300 ${calculateProgress(p.id) >= 75 ? 'bg-gradient-to-r from-emerald-400 to-green-600' : calculateProgress(p.id) >= 50 ? 'bg-gradient-to-r from-teal-400 to-emerald-500' : 'bg-gradient-to-r from-amber-400 to-amber-500'}`}
                       style={{ width: `${calculateProgress(p.id)}%` }}
                     />
                   </div>

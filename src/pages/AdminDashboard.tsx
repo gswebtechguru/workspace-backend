@@ -18,6 +18,13 @@ const weeklyCompletion = [
   { day: 'Sun', completed: 0, planned: 0 },
 ];
 
+// Chart colors - Green theme
+const CHART_COLORS = {
+  primary: '#10b981',
+  secondary: '#14b8a6',
+  accent: '#22c55e',
+};
+
 function getDateRange(filter: DateFilter): { start: Date; end: Date } {
   const now = new Date();
   const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
@@ -89,7 +96,7 @@ export default function AdminDashboard() {
 
   const taskStatusData = [
     { name: 'Completed', value: completedTasks, color: '#10b981' },
-    { name: 'In Progress', value: filteredTasks.filter(t => t.status === 'in_progress').length, color: '#3b82f6' },
+    { name: 'In Progress', value: filteredTasks.filter(t => t.status === 'in_progress').length, color: '#14b8a6' },
     { name: 'Planned', value: plannedTasks, color: '#f59e0b' },
     { name: 'Blocked', value: blockedTasks, color: '#ef4444' },
     { name: 'Overdue', value: overdueTasks, color: '#dc2626' },
@@ -104,12 +111,12 @@ export default function AdminDashboard() {
   const upcomingMilestones = projects.flatMap(p => p.milestones.filter(m => m.status !== 'completed')).slice(0, 5);
 
   const statCards = [
-    { label: 'Present', value: presentCount, total: allEmployees.filter(e => e.status === 'active').length, icon: Users, color: 'bg-green-500', change: '+2', trend: 'up' as const },
-    { label: 'Active Projects', value: activeProjects, icon: FolderKanban, color: 'bg-blue-500' },
-    { label: 'Completed Tasks', value: completedTasks, icon: CheckSquare, color: 'bg-emerald-500', change: '+5', trend: 'up' as const },
-    { label: 'Overdue Tasks', value: overdueTasks, icon: AlertTriangle, color: 'bg-red-500', change: overdueTasks > 0 ? `+${overdueTasks}` : '0', trend: overdueTasks > 0 ? 'down' as const : 'up' as const },
-    { label: 'Absent', value: absentCount, icon: Clock, color: 'bg-amber-500' },
-    { label: 'Pending Leave', value: pendingLeave, icon: FileWarning, color: 'bg-purple-500' },
+    { label: 'Present', value: presentCount, total: allEmployees.filter(e => e.status === 'active').length, icon: Users, color: 'bg-gradient-to-br from-emerald-400 to-green-600', change: '+2', trend: 'up' as const },
+    { label: 'Active Projects', value: activeProjects, icon: FolderKanban, color: 'bg-gradient-to-br from-teal-400 to-emerald-600' },
+    { label: 'Completed Tasks', value: completedTasks, icon: CheckSquare, color: 'bg-gradient-to-br from-green-400 to-emerald-600', change: '+5', trend: 'up' as const },
+    { label: 'Overdue Tasks', value: overdueTasks, icon: AlertTriangle, color: 'bg-gradient-to-br from-red-400 to-red-600', change: overdueTasks > 0 ? `+${overdueTasks}` : '0', trend: overdueTasks > 0 ? 'down' as const : 'up' as const },
+    { label: 'Absent', value: absentCount, icon: Clock, color: 'bg-gradient-to-br from-amber-400 to-amber-600' },
+    { label: 'Pending Leave', value: pendingLeave, icon: FileWarning, color: 'bg-gradient-to-br from-purple-400 to-purple-600' },
   ];
 
   return (
@@ -140,9 +147,9 @@ export default function AdminDashboard() {
         {statCards.map((card, i) => {
           const Icon = card.icon;
           return (
-            <div key={i} className="card p-4 hover:shadow-md transition-shadow cursor-pointer">
+            <div key={i} className="card p-4 hover:shadow-md transition-all duration-200 cursor-pointer">
               <div className="flex items-center justify-between mb-3">
-                <div className={`w-9 h-9 rounded-lg ${card.color} flex items-center justify-center`}>
+                <div className={`w-9 h-9 rounded-lg ${card.color} flex items-center justify-center shadow-sm`}>
                   <Icon className="w-5 h-5 text-white" />
                 </div>
                 {card.change && (
@@ -172,8 +179,8 @@ export default function AdminDashboard() {
               <XAxis dataKey="day" tick={{ fontSize: 12 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Area type="monotone" dataKey="completed" stroke="#10b981" fill="#10b98120" name="Completed" />
-              <Area type="monotone" dataKey="planned" stroke="#3b82f6" fill="#3b82f620" name="Planned" />
+              <Area type="monotone" dataKey="completed" stroke="#10b981" fill="#10b98130" name="Completed" strokeWidth={2} />
+              <Area type="monotone" dataKey="planned" stroke="#14b8a6" fill="#14b8a620" name="Planned" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </div>
@@ -216,8 +223,8 @@ export default function AdminDashboard() {
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 12 }} />
               <Tooltip />
-              <Bar dataKey="estimated" fill="#e0e7ff" name="Estimated" radius={[4,4,0,0]} />
-              <Bar dataKey="actual" fill="#6366f1" name="Actual" radius={[4,4,0,0]} />
+              <Bar dataKey="estimated" fill="#d1fae5" name="Estimated" radius={[4,4,0,0]} />
+              <Bar dataKey="actual" fill="#10b981" name="Actual" radius={[4,4,0,0]} />
             </BarChart>
           </ResponsiveContainer>
         </div>
