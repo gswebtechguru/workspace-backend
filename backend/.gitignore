@@ -1,0 +1,72 @@
+/node_modules
+/public/build
+/public/hot
+/public/storage
+/storage/*.key
+/vendor
+.env
+.env.backup
+.env.production
+.phpactor.json
+.phpunit.result.cache
+Homestead.json
+Homestead.yaml
+auth.json
+npm-debug.log
+yarn-error.log
+/.fleet
+/.idea
+/.vscode
+/.vagrant
+.DS_Store
+Thumbs.db
+
+# Laravel specific
+/storage/framework/cache/*
+/storage/framework/sessions/*
+/storage/framework/views/*
+/storage/logs/*
+!/storage/framework/cache/.gitignore
+!/storage/framework/sessions/.gitignore
+!/storage/framework/views/.gitignore
+!/storage/logs/.gitignore
+
+# Backend uploads
+/storage/app/public/*
+!/storage/app/public/.gitignore
+
+# Database
+/database/*.sqlite
+/database/*.sqlite-shm
+/database/*.sqlite-wal
+
+# Compiled assets
+/public/css
+/public/js
+/public/mix-manifest.json
+
+# IDE & OS files
+*.swp
+*.swo
+*~
+.project
+.settings/
+.buildpath
+nbproject/
+*.sublime-project
+*.sublime-workspace
+
+# Environment
+.php-version
+composer.phar
+
+# Testing
+.phpunit.cache
+coverage/
+
+# Queue
+/queue-work.log
+
+# Backup files
+*.bak
+*.backup
